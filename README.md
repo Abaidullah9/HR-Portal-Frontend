@@ -25,7 +25,7 @@ Pairs with the [HR Portal Backend](https://github.com/Abaidullah9/HR-Portal-Back
 npm install
 ```
 
-Create a `.env.local` file in the project root (optional in dev):
+Create a `.env.local` file in the project root (optional in dev — see `.env.example`):
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
