@@ -1,116 +1,133 @@
-'use client';
+'use client'
 
-import { useEffect } from 'react';
-import { AppLayout } from '@/components/layout/app-layout';
-import { SectionHeader } from '@/components/common/section-header';
-import { Badge } from '@/components/common/badge';
-import { DataTable } from '@/components/common/data-table';
-import { Button } from '@/components/ui/button';
-import { Plus, Users, Briefcase, Calendar } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '@/lib/redux/store';
+import { useEffect, useState } from 'react'
+import { AppLayout } from '@/components/layout/app-layout'
+import { SectionHeader } from '@/components/common/section-header'
+import { Badge } from '@/components/common/badge'
+import { DataTable } from '@/components/common/data-table'
+import { Button } from '@/components/ui/button'
+import { Plus, Briefcase, Users, Calendar } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import {
   fetchJobPostings,
   fetchCandidates,
   fetchInterviews,
-} from '@/lib/redux/slices/recruitmentSlice';
-import { JobPosting } from '@/types/recruitment';
+} from '@/lib/redux/slices/recruitmentSlice'
+import { PostJobModal } from '@/components/recruitment/post-job-modal'
+import { JobPosting } from '@/types/recruitment'
 
 export default function RecruitmentPage() {
-  const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch()
   const { jobPostings, candidates, interviews, loading, error } = useAppSelector(
-    (state) => state.recruitment
-  );
+    (state) => state.recruitment,
+  )
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
-    dispatch(fetchJobPostings());
-    dispatch(fetchCandidates());
-    dispatch(fetchInterviews());
-  }, [dispatch]);
+    dispatch(fetchJobPostings())
+    dispatch(fetchCandidates())
+    dispatch(fetchInterviews())
+  }, [dispatch])
 
-  const openPositionsCount = jobPostings.filter((j) => j.status === 'open').length;
+  const openPositionsCount = jobPostings.filter((j) => j.status === 'open').length
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '--';
+    if (!dateStr) return '--'
     try {
-      return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      return new Date(dateStr).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     } catch {
-      return dateStr;
+      return dateStr
     }
-  };
+  }
 
   const getStatusBadge = (status: string) => {
-    if (status === 'open') return <Badge variant="success">Open</Badge>;
-    if (status === 'closed') return <Badge variant="destructive">Closed</Badge>;
-    return <Badge variant="warning">On Hold</Badge>;
-  };
+    if (status === 'open') return <Badge variant="success">Open</Badge>
+    if (status === 'closed') return <Badge variant="destructive">Closed</Badge>
+    return <Badge variant="warning">On Hold</Badge>
+  }
 
   return (
     <AppLayout>
-      <div className="space-y-8">
+      <div className="space-y-10">
         <SectionHeader
           title="Recruitment & Hiring"
           description="Manage job postings, applicant pipelines, and interview schedules"
           action={
-            <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="gap-2 brand text-white border edge"
+            >
               <Plus size={18} />
-              Post Job
+              Post a Job
             </Button>
           }
         />
 
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
+          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
             {error}
           </div>
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-card border border-border rounded-xl p-6 shadow-xs flex items-center justify-between">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="group flex items-center justify-between rounded-2xl border edge bg-white/70 p-5 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85">
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Open Positions</p>
-              <p className="text-3xl font-bold mt-1">{openPositionsCount}</p>
+              <p className="text-sm font-medium text-foreground/60">Open Positions</p>
+              <p className="mt-1 text-3xl font-bold text-foreground">{openPositionsCount}</p>
             </div>
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-lg text-blue-600">
-              <Briefcase size={24} />
-            </div>
+            <span className="brand-tile flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <Briefcase size={22} strokeWidth={2} />
+            </span>
           </div>
-          <div className="bg-card border border-border rounded-xl p-6 shadow-xs flex items-center justify-between">
+
+          <div className="group flex items-center justify-between rounded-2xl border edge bg-white/70 p-5 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85">
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Active Candidates</p>
-              <p className="text-3xl font-bold mt-1">{candidates.length}</p>
+              <p className="text-sm font-medium text-foreground/60">Active Candidates</p>
+              <p className="mt-1 text-3xl font-bold text-foreground">{candidates.length}</p>
             </div>
-            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-indigo-600">
-              <Users size={24} />
-            </div>
+            <span className="soft-tile flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <Users size={22} strokeWidth={2} />
+            </span>
           </div>
-          <div className="bg-card border border-border rounded-xl p-6 shadow-xs flex items-center justify-between">
+
+          <div className="group flex items-center justify-between rounded-2xl border edge bg-white/70 p-5 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85">
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Scheduled Interviews</p>
-              <p className="text-3xl font-bold mt-1">{interviews.length}</p>
+              <p className="text-sm font-medium text-foreground/60">Scheduled Interviews</p>
+              <p className="mt-1 text-3xl font-bold text-foreground">{interviews.length}</p>
             </div>
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg text-emerald-600">
-              <Calendar size={24} />
-            </div>
+            <span className="success-panel flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border">
+              <Calendar size={22} strokeWidth={2} />
+            </span>
           </div>
         </div>
 
-        {/* Job Postings Table */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-border">
+        {/* Job postings */}
+        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
+          <div className="border-b edge px-6 py-4">
             <h3 className="font-semibold text-foreground">Active Job Postings</h3>
           </div>
           {loading && jobPostings.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">Loading job postings...</div>
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              Loading job postings…
+            </div>
           ) : jobPostings.length > 0 ? (
             <DataTable<JobPosting>
               columns={[
-                { header: 'Position', accessor: 'position', className: 'font-semibold' },
+                {
+                  header: 'Position',
+                  accessor: 'position',
+                  className: 'font-semibold',
+                },
                 {
                   header: 'Department',
                   accessor: 'departmentId',
                   render: (dept) =>
-                    typeof dept === 'object' && dept !== null ? dept.name : 'Engineering',
+                    typeof dept === 'object' && dept !== null && 'name' in dept ? dept.name : '--',
                 },
                 {
                   header: 'Openings',
@@ -121,7 +138,7 @@ export default function RecruitmentPage() {
                   header: 'Posted Date',
                   accessor: 'postedOnDate',
                   render: (date) => formatDate(date),
-                  className: 'text-muted-foreground text-sm',
+                  className: 'text-foreground/65 text-sm',
                 },
                 {
                   header: 'Status',
@@ -132,10 +149,21 @@ export default function RecruitmentPage() {
               data={jobPostings}
             />
           ) : (
-            <div className="p-8 text-center text-muted-foreground">No job postings found.</div>
+            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
+              <p className="mb-4">No job postings found.</p>
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                className="gap-2 brand text-white border edge"
+              >
+                <Plus size={18} />
+                Post a Job
+              </Button>
+            </div>
           )}
         </div>
       </div>
+
+      <PostJobModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </AppLayout>
-  );
+  )
 }

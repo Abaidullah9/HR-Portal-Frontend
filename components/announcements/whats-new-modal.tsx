@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
 
 const CURRENT_VERSION = '2.0.0'
 const STORAGE_KEY = 'whats-new-dismissed-version'
@@ -49,7 +50,6 @@ export function WhatsNewModal() {
   useEffect(() => {
     const dismissedVersion = localStorage.getItem(STORAGE_KEY)
     if (dismissedVersion !== CURRENT_VERSION) {
-      // Delay modal opening for better UX
       const timer = setTimeout(() => setIsOpen(true), 500)
       return () => clearTimeout(timer)
     }
@@ -60,72 +60,91 @@ export function WhatsNewModal() {
     setIsOpen(false)
   }
 
+  // Dialog keyboard behaviour: focus trap, Escape, scroll lock, focus restore.
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogA11y({ open: isOpen, containerRef: dialogRef, onClose: handleDismiss })
+
   if (!isOpen) return null
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 animate-in fade-in"
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
         onClick={handleDismiss}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
-        <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          ref={dialogRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="whats-new-title"
+          className="w-full max-w-md overflow-y-auto rounded-2xl border edge bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-xl dark:edge dark:surface-95"
+        >
           {/* Header */}
-          <div className="relative p-8 text-center border-b border-border">
+          <div className="mb-6 border-b edge pb-6 text-center">
             <button
+              type="button"
               onClick={handleDismiss}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg text-foreground/60 press transition-colors hover:bg-white/50 hover:text-foreground dark:hover:bg-white/5"
+              aria-label="Close dialog"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            {/* Icon */}
-            <div className="flex justify-center mb-4">
-              <div className="relative w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Sparkles className="text-primary" size={32} />
-                <div
-                  className="absolute inset-0 border-2 border-primary/20 rounded-full animate-pulse"
-                  style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
-                />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-foreground/5 shadow-lg shadow-black/20">
+              <div className="relative h-12 w-12">
+                <div className="absolute inset-0 rounded-full border-2 animate-pulse" />
+                <div className="absolute inset-0 rounded-full border" />
+                <Sparkles className="relative brand-text" size={30} strokeWidth={2} />
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold mb-2">What&apos;s New</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 id="whats-new-title" className="text-2xl font-bold text-foreground">
+              What&apos;s New
+            </h2>
+            <p className="mt-1 text-sm text-foreground/60">
               Version {CURRENT_VERSION} brings exciting updates
             </p>
           </div>
 
           {/* Features */}
-          <div className="p-6 space-y-4">
+          <div className="space-y-4">
             {features.map((feature, index) => (
-              <div key={index} className="flex gap-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles size={20} className="text-primary" />
-                </div>
+              <div
+                key={index}
+                className="flex gap-4 overflow-hidden rounded-xl border edge bg-white/60 p-4 backdrop-blur-sm transition-all duration-200 hover:-translate-x-1 hover:shadow-md dark:surface-50"
+              >
+                <span className="brand-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                  <Sparkles size={18} strokeWidth={2} />
+                </span>
                 <div>
-                  <h3 className="font-semibold text-sm">{feature.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {feature.description}
-                  </p>
+                  <h3 className="font-semibold text-sm text-foreground">{feature.title}</h3>
+                  <p className="mt-1 text-xs text-foreground/65">{feature.description}</p>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-border space-y-3">
-            <Button
-              onClick={() => window.open('https://blog.example.com/v2', '_blank')}
-              variant="outline"
-              className="w-full"
+          <div className="mt-6 border-t edge pt-6 flex gap-3">
+            <a
+              href="https://blog.example.com/v2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 inline-flex items-center justify-center rounded-xl border edge bg-white/80 px-4 text-sm text-foreground hover:bg-white hover:shadow-md hover:shadow-black/10 dark:edge dark:surface-80"
             >
               Learn More
-            </Button>
-            <Button onClick={handleDismiss} className="w-full">
+            </a>
+            <Button
+              type="button"
+              onClick={handleDismiss}
+              className="flex-1 brand text-white border edge"
+            >
               Got it!
             </Button>
           </div>

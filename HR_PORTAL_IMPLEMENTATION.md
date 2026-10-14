@@ -67,7 +67,7 @@ Employee: employee@example.com / emp123
   - User avatar with initials
   - User profile dropdown
   - **Logout functionality** - Clears auth and redirects to login
-  - Theme toggle (light/dark mode)
+  - Palette switcher (four themes, see Styling & Design)
   - Notification bell
   - Search functionality
 
@@ -140,7 +140,13 @@ Employee: employee@example.com / emp123
 - localStorage-based storage (suitable for demo/development)
 
 ## Styling & Design
-- Professional blue/indigo color scheme
+- **Four palette themes** switchable at runtime from the header: Midnight Navy + Electric Blue,
+  Dark Indigo + Violet, White Slate (light), and Charcoal Emerald + Teal
+- Every colour in the UI derives from CSS variables set in `app/globals.css`
+  (`--bg-rgb`, `--surface-rgb`, `--brand-rgb`, `--brand-fg`, `--edge-rgb`, status colours…),
+  so `data-palette` on `<html>` repaints surfaces, borders, icons, logos and status tones together
+- A pre-paint inline script in `app/layout.tsx` applies the stored palette before first render,
+  and the browser chrome (`theme-color`) follows the active palette
 - Gradient backgrounds for visual appeal
 - Responsive design (mobile-first approach)
 - Smooth animations and transitions

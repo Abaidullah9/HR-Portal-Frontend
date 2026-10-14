@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { RoleSelector } from '@/components/performance/role-selector'
 import { EmployeeView } from '@/components/performance/employee-view'
@@ -40,19 +40,19 @@ export default function PerformancePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        {/* Role Selector */}
+      <div className="space-y-10">
         <div className="space-y-4">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Performance Management</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Performance Management
+            </h1>
+            <p className="mt-2 text-sm text-foreground/60">
               Select your role to view personalized performance insights
             </p>
           </div>
           <RoleSelector selectedRole={selectedRole} onRoleChange={setSelectedRole} />
         </div>
 
-        {/* Role-Specific Content */}
         {renderView()}
       </div>
     </AppLayout>

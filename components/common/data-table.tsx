@@ -20,13 +20,13 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   return (
     <div className={cn('overflow-x-auto', className)}>
-      <table className="w-full">
+      <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-border">
+          <tr>
             {columns.map((column) => (
               <th
                 key={String(column.accessor)}
-                className="px-6 py-3 text-left text-sm font-semibold text-foreground"
+                className="px-6 py-4 text-left text-sm font-semibold text-foreground/80"
               >
                 {column.header}
               </th>
@@ -37,17 +37,19 @@ export function DataTable<T extends Record<string, any>>({
           {data.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              className="border-b border-border hover:bg-muted/50 transition-colors"
+              className={cn(
+                'group transition-colors duration-150',
+                'border-b edge last:border-0',
+                'hover:bg-white/40 dark:hover:bg-white/5',
+                rowIndex % 2 === 1 && 'bg-white/[0.12] dark:bg-white/[0.02]',
+              )}
             >
               {columns.map((column) => {
                 const value = row[column.accessor]
                 return (
                   <td
                     key={String(column.accessor)}
-                    className={cn(
-                      'px-6 py-4 text-sm text-foreground',
-                      column.className
-                    )}
+                    className={cn('px-6 py-4 text-sm text-foreground', column.className)}
                   >
                     {column.render ? column.render(value, row) : value}
                   </td>
@@ -57,11 +59,6 @@ export function DataTable<T extends Record<string, any>>({
           ))}
         </tbody>
       </table>
-      {data.length === 0 && (
-        <div className="flex items-center justify-center h-32 text-muted-foreground">
-          No data available
-        </div>
-      )}
     </div>
   )
 }

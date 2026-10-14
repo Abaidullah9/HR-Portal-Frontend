@@ -7,21 +7,14 @@ interface SectionHeaderProps {
   className?: string
 }
 
-export function SectionHeader({
-  title,
-  description,
-  action,
-  className,
-}: SectionHeaderProps) {
+export function SectionHeader({ title, description, action, className }: SectionHeaderProps) {
   return (
-    <div className={cn('flex items-start justify-between', className)}>
+    <div className={cn('flex items-start justify-between gap-4', className)}>
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-        {description && (
-          <p className="text-muted-foreground mt-1 text-sm">{description}</p>
-        )}
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
+        {description && <p className="mt-1 text-sm text-foreground/60">{description}</p>}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }

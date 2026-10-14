@@ -7,13 +7,16 @@ import { StatCard } from '@/components/common/stat-card'
 import { DataTable } from '@/components/common/data-table'
 import { Badge } from '@/components/common/badge'
 import { SectionHeader } from '@/components/common/section-header'
+import { Button } from '@/components/ui/button'
 import {
   Users,
   Calendar,
   CheckCircle,
   TrendingUp,
+  ChevronRight,
+  Briefcase,
+  ClipboardList,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchEmployees } from '@/lib/redux/slices/employeeSlice'
 import { fetchAttendance } from '@/lib/redux/slices/attendanceSlice'
@@ -26,6 +29,33 @@ interface ActivityItem {
   date: string
   status: string
 }
+
+const QUICK_ACTIONS = [
+  {
+    label: 'Manage Employees',
+    description: 'Onboard new staff and view directory',
+    href: '/employees',
+    icon: Users,
+  },
+  {
+    label: 'Manage Leaves',
+    description: 'View and approve leave requests',
+    href: '/leaves',
+    icon: Calendar,
+  },
+  {
+    label: 'Run Payroll',
+    description: 'Process salaries and review summaries',
+    href: '/payroll',
+    icon: TrendingUp,
+  },
+  {
+    label: 'Attendance',
+    description: 'Track daily check-ins and check-outs',
+    href: '/attendance',
+    icon: CheckCircle,
+  },
+]
 
 export default function Home() {
   const dispatch = useAppDispatch()
@@ -40,7 +70,6 @@ export default function Home() {
     dispatch(fetchLeaveRequests())
   }, [dispatch])
 
-  // Calculate dynamic stats from real Redux data
   const stats = useMemo(() => {
     const total = employees.length
     const active = employees.filter((e) => e.isActive !== false).length
@@ -75,12 +104,14 @@ export default function Home() {
     ]
   }, [employees, attendanceRecords, leaveRequests])
 
-  // Recent activities generated from real data
   const recentActivities: ActivityItem[] = useMemo(() => {
     const activities: ActivityItem[] = []
 
     leaveRequests.slice(0, 3).forEach((req) => {
-      const empName = typeof req.employeeId === 'object' && req.employeeId !== null ? req.employeeId.name : 'Employee'
+      const empName =
+        typeof req.employeeId === 'object' && req.employeeId !== null
+          ? req.employeeId.name
+          : 'Employee'
       activities.push({
         id: req._id,
         employee: empName,
@@ -105,37 +136,44 @@ export default function Home() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">
-            Welcome back, {user?.name?.split(' ')[0] || 'User'}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Here&apos;s what&apos;s happening with your HR today.
-          </p>
+      <div className="space-y-10">
+        {/* Banner */}
+        <div className="rounded-2xl p-8 text-foreground border shadow-lg shadow-black/10">
+          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center md:gap-6">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                Welcome back, {user?.name?.split(' ')[0] || 'User'}
+              </h1>
+              <p className="mt-2 max-w-xl text-sm text-foreground/60">
+                Here&apos;s what&apos;s happening across your HR workspace today.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="gap-2 brand-text hover:brand-text dark: dark:brand-text"
+              >
+                <Briefcase size={16} />
+                See all activity
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <StatCard
-              key={stat.title}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              trend={stat.trend}
-            />
+            <StatCard key={stat.title} {...stat} />
           ))}
         </div>
 
-        {/* Recent Activities */}
+        {/* Recent activities */}
         <div className="space-y-4">
           <SectionHeader
-            title="Recent Activities"
+            title="Recent Activity"
             description="Latest updates and actions across your organization"
           />
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border edge bg-white/70 backdrop-blur-md shadow-xl shadow-black/5 dark:edge dark:surface-85">
             {recentActivities.length > 0 ? (
               <DataTable<ActivityItem>
                 columns={[
@@ -151,7 +189,7 @@ export default function Home() {
                   {
                     header: 'Date',
                     accessor: 'date',
-                    className: 'text-muted-foreground text-sm',
+                    className: 'text-foreground/65 text-sm',
                   },
                   {
                     header: 'Status',
@@ -174,53 +212,40 @@ export default function Home() {
                 data={recentActivities}
               />
             ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                No recent activities found.
+              <div className="flex h-40 items-center justify-center text-sm text-foreground/60">
+                No recent activities yet.
               </div>
             )}
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick actions */}
         <div className="space-y-4">
-          <SectionHeader title="Quick Actions" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <Link href="/employees" className="block">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-auto p-4 hover:border-primary/50 transition-colors"
-              >
-                <Users size={20} className="mr-3 text-blue-600" />
-                <div className="text-left">
-                  <p className="font-medium">Manage Employees</p>
-                  <p className="text-xs text-muted-foreground">Onboard new staff and view directory</p>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/leaves" className="block">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-auto p-4 hover:border-primary/50 transition-colors"
-              >
-                <Calendar size={20} className="mr-3 text-indigo-600" />
-                <div className="text-left">
-                  <p className="font-medium">Manage Leaves</p>
-                  <p className="text-xs text-muted-foreground">View and approve leave requests</p>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/payroll" className="block">
-              <Button
-                variant="outline"
-                className="w-full justify-start h-auto p-4 hover:border-primary/50 transition-colors"
-              >
-                <TrendingUp size={20} className="mr-3 text-emerald-600" />
-                <div className="text-left">
-                  <p className="font-medium">Run Payroll</p>
-                  <p className="text-xs text-muted-foreground">Process salaries and review summaries</p>
-                </div>
-              </Button>
-            </Link>
+          <SectionHeader title="Quick Actions" description="Jump to the most used HR tools" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon
+              return (
+                <Link key={action.href} href={action.href} className="group block">
+                  <button
+                    type="button"
+                    className="flex w-full cursor-pointer items-center gap-4 rounded-2xl border edge bg-white/70 px-5 py-5 text-left shadow-xl shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10 dark:edge dark:surface-80 active:scale-[0.98]"
+                  >
+                    <span className="brand-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                      <Icon size={20} />
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-foreground">{action.label}</span>
+                      <span className="text-sm text-foreground/60">{action.description}</span>
+                    </div>
+                    <ChevronRight
+                      size={18}
+                      className="ml-auto shrink-0 text-foreground/65 transition-transform group-hover:translate-x-1 group-hover:text-foreground/60"
+                    />
+                  </button>
+                </Link>
+              )
+            })}
           </div>
         </div>
       </div>

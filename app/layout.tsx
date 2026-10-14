@@ -29,14 +29,26 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: 'light dark',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a2e' },
-  ],
+  themeColor: '#080d1a',
   userScalable: false,
   width: 'device-width',
   initialScale: 1,
 }
+
+/**
+ * Applies the stored palette before paint so the app never flashes the wrong
+ * theme. Light palettes ("slate") drop the `dark` class, dark palettes add it.
+ */
+const paletteInitScript = `(function(){try{
+var stored=localStorage.getItem('hr-palette');
+if(!stored){stored=localStorage.getItem('theme')==='light'?'slate':'midnight';}
+var root=document.documentElement;
+root.setAttribute('data-palette',stored);
+if(stored==='slate'){root.classList.remove('dark');}else{root.classList.add('dark');}
+var bg={'midnight':'#080d1a','indigo':'#0c0d18','slate':'#ffffff','emerald':'#0a0f0d'}[stored];
+if(bg){var metas=document.querySelectorAll('meta[name="theme-color"]');
+for(var i=0;i<metas.length;i++){metas[i].setAttribute('content',bg);}}
+}catch(e){}})();`
 
 export default function RootLayout({
   children,
@@ -44,7 +56,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" data-palette="midnight" className="dark bg-background" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: paletteInitScript }} />
+      </head>
       <body className="antialiased">
         <StoreProvider>
           <ProtectedWrapper>{children}</ProtectedWrapper>

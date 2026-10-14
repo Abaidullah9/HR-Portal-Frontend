@@ -1,325 +1,230 @@
 'use client'
 
-import { StatCard } from '@/components/common/stat-card'
 import { Badge } from '@/components/common/badge'
-import { Button } from '@/components/ui/button'
+import { StatCard } from '@/components/common/stat-card'
 import { DataTable } from '@/components/common/data-table'
-import {
-  BarChart3,
-  Users,
-  TrendingUp,
-  Zap,
-  Plus,
-  Settings,
-  Download,
-  Eye,
-} from 'lucide-react'
+import { useAppSelector } from '@/lib/redux/store'
+import { BarChart3, Users, TrendingUp, Zap } from 'lucide-react'
+import { PerformanceCycle } from '@/types/performance'
 
-const hrStats = [
-  {
-    title: 'Total Employees',
-    value: '248',
-    icon: Users,
-    trend: { direction: 'up' as const, percentage: 5 },
-  },
-  {
-    title: 'Appraisals Completed',
-    value: '184',
-    icon: TrendingUp,
-    trend: { direction: 'up' as const, percentage: 74 },
-  },
-  {
-    title: 'Appraisals Pending',
-    value: '64',
-    icon: Zap,
-    trend: { direction: 'down' as const, percentage: 26 },
-  },
-  {
-    title: 'Org Avg Rating',
-    value: '4.1',
-    icon: BarChart3,
-    trend: { direction: 'up' as const, percentage: 3 },
-  },
-]
+const resolveName = (v: string | { _id: string; name?: string } | undefined) =>
+  typeof v === 'object' && v !== null ? v.name || 'Unknown' : 'Unknown'
 
-const appraisalCycles = [
-  {
-    id: 1,
-    cycle: 'Q4 2024 Review',
-    startDate: 'Dec 1, 2024',
-    endDate: 'Dec 31, 2024',
-    status: 'active',
-    employees: 248,
-    completed: 184,
-    daysLeft: 9,
-  },
-  {
-    id: 2,
-    cycle: 'Q3 2024 Review',
-    startDate: 'Sep 1, 2024',
-    endDate: 'Sep 30, 2024',
-    status: 'completed',
-    employees: 248,
-    completed: 248,
-    daysLeft: 0,
-  },
-  {
-    id: 3,
-    cycle: 'Mid-Year Review 2024',
-    startDate: 'Jun 15, 2024',
-    endDate: 'Jul 15, 2024',
-    status: 'completed',
-    employees: 242,
-    completed: 242,
-    daysLeft: 0,
-  },
-]
-
-const departmentPerformance = [
-  {
-    id: 1,
-    department: 'Engineering',
-    employees: 45,
-    avgRating: 4.3,
-    completed: 42,
-    pending: 3,
-  },
-  {
-    id: 2,
-    department: 'Sales',
-    employees: 32,
-    avgRating: 4.0,
-    completed: 28,
-    pending: 4,
-  },
-  {
-    id: 3,
-    department: 'Marketing',
-    employees: 18,
-    avgRating: 4.2,
-    completed: 18,
-    pending: 0,
-  },
-  {
-    id: 4,
-    department: 'HR',
-    employees: 12,
-    avgRating: 4.1,
-    completed: 11,
-    pending: 1,
-  },
-  {
-    id: 5,
-    department: 'Operations',
-    employees: 35,
-    avgRating: 3.9,
-    completed: 30,
-    pending: 5,
-  },
-  {
-    id: 6,
-    department: 'Finance',
-    employees: 28,
-    avgRating: 4.0,
-    completed: 27,
-    pending: 1,
-  },
-]
+function daysUntil(dateStr: string): number {
+  const diff = new Date(dateStr).getTime() - Date.now()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
 
 export function HRView() {
+  const { cycles, appraisals, loading } = useAppSelector((state) => state.performance)
+
+  const totalCompleted = appraisals.filter((a) => a.status === 'completed').length
+  const totalPending = appraisals.length - totalCompleted
+  const ratedAppraisals = appraisals.filter((a) => a.overallRating != null)
+  const orgAvg =
+    ratedAppraisals.length > 0
+      ? (
+          ratedAppraisals.reduce((sum, a) => sum + (a.overallRating || 0), 0) /
+          ratedAppraisals.length
+        ).toFixed(1)
+      : '--'
+
+  const stats = [
+    { title: 'Appraisal Cycles', value: `${cycles.length}`, icon: Zap },
+    {
+      title: 'Appraisals Completed',
+      value: `${totalCompleted}`,
+      icon: TrendingUp,
+    },
+    { title: 'Appraisals Pending', value: `${totalPending}`, icon: Users },
+    { title: 'Org Avg Rating', value: orgAvg, icon: BarChart3 },
+  ]
+
+  const rows = cycles.map((cycle) => {
+    const cycleAppraisals = appraisals.filter(
+      (a) =>
+        (typeof a.cycleId === 'object' && a.cycleId !== null ? a.cycleId._id : a.cycleId) ===
+        cycle._id,
+    )
+    const completed = cycleAppraisals.filter((a) => a.status === 'completed').length
+    return {
+      _id: cycle._id,
+      name: cycle.name,
+      period: `${new Date(cycle.startDate).toLocaleDateString()} — ${new Date(cycle.endDate).toLocaleDateString()}`,
+      status: cycle.status,
+      total: cycleAppraisals.length,
+      completed,
+      pending: cycleAppraisals.length - completed,
+      daysLeft: cycle.status === 'active' ? daysUntil(cycle.endDate) : 0,
+    }
+  })
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Performance Management Hub</h2>
-          <p className="text-muted-foreground mt-1">Manage appraisal cycles and organizational performance</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download size={16} className="mr-2" />
-            Export Report
-          </Button>
-          <Button size="sm">
-            <Plus size={16} className="mr-2" />
-            New Cycle
-          </Button>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Performance Management Hub</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Manage appraisal cycles and organizational performance
+        </p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {hrStats.map((stat) => (
-          <StatCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            trend={stat.trend}
-          />
+      {/* Key metrics */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      {/* Active Cycles */}
+      {/* Cycles */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold">Appraisal Cycles</h3>
-            <p className="text-sm text-muted-foreground mt-1">Manage and monitor all appraisal cycles</p>
-          </div>
-          <Button variant="outline" size="sm">
-            <Settings size={16} className="mr-2" />
-            Cycle Settings
-          </Button>
+        <div>
+          <h3 className="text-xl font-semibold text-foreground">Appraisal Cycles</h3>
+          <p className="mt-1 text-sm text-foreground/60">
+            All performance cycles and their completion status
+          </p>
         </div>
 
-        <div className="grid gap-4">
-          {appraisalCycles.map((cycle) => {
-            const progress = (cycle.completed / cycle.employees) * 100
-            return (
-              <div
-                key={cycle.id}
-                className="bg-card border border-border rounded-lg p-6"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h4 className="font-semibold text-lg">{cycle.cycle}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {cycle.startDate} — {cycle.endDate}
-                    </p>
+        {loading && cycles.length === 0 ? (
+          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
+            Loading performance cycles…
+          </div>
+        ) : cycles.length === 0 ? (
+          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
+            No appraisal cycles created yet.
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {rows.map((cycle) => {
+              const completionRate = cycle.total > 0 ? (cycle.completed / cycle.total) * 100 : 0
+              return (
+                <div
+                  key={cycle._id}
+                  className="group overflow-hidden rounded-2xl border edge bg-white/70 p-6 shadow-md shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85"
+                >
+                  <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+                    <div>
+                      <h4 className="font-semibold text-lg text-foreground">{cycle.name}</h4>
+                      <p className="text-sm text-foreground/65">{cycle.period}</p>
+                    </div>
+                    <Badge
+                      variant={
+                        cycle.status === 'active'
+                          ? 'info'
+                          : cycle.status === 'completed'
+                            ? 'success'
+                            : 'warning'
+                      }
+                      className="text-xs"
+                    >
+                      {cycle.status === 'active' ? (
+                        <>
+                          <Zap size={12} className="mr-1 brand-text" />
+                          Active
+                          {cycle.daysLeft > 0 ? ` · ${cycle.daysLeft}d left` : ''}
+                        </>
+                      ) : (
+                        cycle.status.charAt(0).toUpperCase() + cycle.status.slice(1)
+                      )}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={cycle.status === 'active' ? 'info' : 'success'}
-                    className="text-xs"
-                  >
-                    {cycle.status === 'active' ? (
-                      <>
-                        <Zap size={12} className="mr-1" />
-                        Active - {cycle.daysLeft} days left
-                      </>
-                    ) : (
-                      'Completed'
-                    )}
-                  </Badge>
-                </div>
 
-                <div className="grid grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Employees</p>
-                    <p className="text-2xl font-bold mt-1">{cycle.employees}</p>
+                  <div className="grid grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-foreground/65">Appraisals</p>
+                      <p className="mt-1 text-2xl font-bold text-foreground">{cycle.total}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-foreground/65">Completed</p>
+                      <p className="mt-1 text-2xl font-bold success-text">
+                        {cycle.completed}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-foreground/65">Pending</p>
+                      <p className="mt-1 text-2xl font-bold warning-text dark:warning-text">
+                        {cycle.pending}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-foreground/65">Completion</p>
+                      <p className="mt-1 text-2xl font-bold text-foreground">
+                        {completionRate.toFixed(0)}%
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Completed</p>
-                    <p className="text-2xl font-bold text-success mt-1">{cycle.completed}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Pending</p>
-                    <p className="text-2xl font-bold text-warning mt-1">
-                      {cycle.employees - cycle.completed}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Completion Rate</p>
-                    <p className="text-2xl font-bold text-primary mt-1">{progress.toFixed(0)}%</p>
-                  </div>
-                </div>
 
-                <div className="mb-4">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
                     <div
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${progress}%` }}
+                      className="h-full rounded-full brand transition-all duration-300"
+                      style={{ width: `${completionRate}%` }}
                     />
                   </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Eye size={14} className="mr-1" />
-                    View Details
-                  </Button>
-                  {cycle.status === 'active' && (
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <Download size={14} className="mr-1" />
-                      Export
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Department Performance */}
+      {/* Appraisal records */}
       <div className="space-y-4">
         <div>
-          <h3 className="text-xl font-semibold">Performance by Department</h3>
-          <p className="text-sm text-muted-foreground mt-1">Current appraisal status across all departments</p>
+          <h3 className="text-xl font-semibold text-foreground">Appraisal Records</h3>
+          <p className="mt-1 text-sm text-foreground/60">
+            Individual appraisal status across the organization
+          </p>
         </div>
 
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <DataTable
-            columns={[
-              { header: 'Department', accessor: 'department', className: 'font-medium' },
-              { header: 'Employees', accessor: 'employees', className: 'text-center font-semibold' },
-              {
-                header: 'Avg Rating',
-                accessor: 'avgRating',
-                className: 'text-center font-bold text-primary',
-              },
-              {
-                header: 'Completed',
-                accessor: 'completed',
-                className: 'text-center',
-                render: (completed) => (
-                  <Badge variant="success" className="text-xs">
-                    {completed}
-                  </Badge>
-                ),
-              },
-              {
-                header: 'Pending',
-                accessor: 'pending',
-                className: 'text-center',
-                render: (pending) => (
-                  <Badge variant={pending > 0 ? 'warning' : 'success'} className="text-xs">
-                    {pending}
-                  </Badge>
-                ),
-              },
-              {
-                header: 'Actions',
-                accessor: 'id',
-                render: () => (
-                  <Button size="sm" variant="ghost" className="h-8 text-xs">
-                    View
-                  </Button>
-                ),
-                className: 'text-right',
-              },
-            ]}
-            data={departmentPerformance}
-          />
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-success/10 border border-success/20 rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">On Track</p>
-          <p className="text-3xl font-bold text-success mt-2">184/248</p>
-          <p className="text-xs text-muted-foreground mt-1">74% completion rate</p>
-        </div>
-        <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">At Risk</p>
-          <p className="text-3xl font-bold text-warning mt-2">18</p>
-          <p className="text-xs text-muted-foreground mt-1">2 days overdue</p>
-        </div>
-        <div className="bg-info/10 border border-info/20 rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Org Average</p>
-          <p className="text-3xl font-bold text-info mt-2">4.1/5</p>
-          <p className="text-xs text-muted-foreground mt-1">+3% vs last cycle</p>
+        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
+          {loading && appraisals.length === 0 ? (
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              Loading appraisals…
+            </div>
+          ) : appraisals.length === 0 ? (
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              No appraisal records found.
+            </div>
+          ) : (
+            <DataTable
+              columns={[
+                {
+                  header: 'Employee',
+                  accessor: 'employee',
+                  render: (_v, row) => row.employee,
+                  className: 'font-medium',
+                },
+                {
+                  header: 'Rating',
+                  accessor: 'rating',
+                  className: 'text-center font-bold text-foreground',
+                },
+                {
+                  header: 'Review Date',
+                  accessor: 'reviewDate',
+                  className: 'text-foreground/65 text-sm',
+                },
+                {
+                  header: 'Status',
+                  accessor: 'status',
+                  render: (status) => (
+                    <Badge
+                      variant={status === 'completed' ? 'success' : 'warning'}
+                      className="text-xs"
+                    >
+                      {status === 'completed' ? 'Completed' : 'Pending'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={appraisals.map((a) => ({
+                employee: resolveName(a.employeeId),
+                rating: a.overallRating != null ? `${a.overallRating}` : '--',
+                reviewDate: a.reviewDate ? new Date(a.reviewDate).toLocaleDateString() : '--',
+                status: a.status,
+              }))}
+            />
+          )}
         </div>
       </div>
     </div>

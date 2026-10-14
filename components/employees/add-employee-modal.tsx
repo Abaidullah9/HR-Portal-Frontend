@@ -1,16 +1,17 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useAppDispatch, useAppSelector } from '@/lib/redux/store';
-import { addEmployee } from '@/lib/redux/slices/employeeSlice';
-import { CreateEmployeePayload } from '@/types/employee';
+import { useRef, useState } from 'react'
+import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
+import { addEmployee } from '@/lib/redux/slices/employeeSlice'
+import { CreateEmployeePayload } from '@/types/employee'
+import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
 
 interface AddEmployeeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
 
 const POSITIONS = [
@@ -24,11 +25,15 @@ const POSITIONS = [
   'Financial Analyst',
   'Operations Manager',
   'UI/UX Designer',
-];
+]
 
 export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
-  const dispatch = useAppDispatch();
-  const { departments } = useAppSelector((state) => state.employee);
+  const dispatch = useAppDispatch()
+  const { departments } = useAppSelector((state) => state.employee)
+
+  // Dialog keyboard behaviour: focus trap, Escape, scroll lock, focus restore.
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogA11y({ open: isOpen, containerRef: dialogRef, onClose })
 
   const [formData, setFormData] = useState({
     name: '',
@@ -40,35 +45,33 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
     salary: '',
     employmentType: 'full-time' as const,
     phone: '',
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
     if (!formData.name || !formData.email || !formData.employeeCode) {
-      setError('Please fill in all required fields');
-      return;
+      setError('Please fill in all required fields')
+      return
     }
 
-    const selectedDept = formData.departmentId || departments[0]?._id;
+    const selectedDept = formData.departmentId || departments[0]?._id
     if (!selectedDept) {
-      setError('Please select or create a department first');
-      return;
+      setError('Please select or create a department first')
+      return
     }
 
-    const salaryNum = formData.salary ? parseFloat(formData.salary) : undefined;
+    const salaryNum = formData.salary ? parseFloat(formData.salary) : undefined
 
-    setLoading(true);
+    setLoading(true)
     try {
       const payload: CreateEmployeePayload = {
         name: formData.name,
@@ -81,11 +84,11 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
         salary: salaryNum,
         phone: formData.phone || undefined,
         isActive: true,
-      };
+      }
 
-      const result = await dispatch(addEmployee(payload));
+      const result = await dispatch(addEmployee(payload))
       if (addEmployee.fulfilled.match(result)) {
-        onClose();
+        onClose()
         setFormData({
           name: '',
           email: '',
@@ -96,46 +99,58 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
           salary: '',
           employmentType: 'full-time',
           phone: '',
-        });
+        })
       } else {
-        setError(result.payload || 'Failed to add employee');
+        setError(result.payload || 'Failed to add employee')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add employee');
+      setError(err instanceof Error ? err.message : 'Failed to add employee')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-employee-title"
+        className="w-full max-w-2xl overflow-y-auto rounded-2xl border edge bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-xl dark:edge dark:surface-95"
+      >
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-border bg-card">
-          <h2 className="text-xl font-bold text-foreground">Add New Employee</h2>
+        <div className="mb-6 border-b edge pb-6 flex items-center justify-between">
+          <h2 id="add-employee-title" className="text-xl font-bold text-foreground">
+            Add New Employee
+          </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground/60 press transition-colors hover:bg-white/50 hover:text-foreground dark:hover:bg-white/5"
+            aria-label="Close dialog"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
+            <div className="rounded-xl border danger-panel p-3 text-sm backdrop-blur-sm">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Full Name *
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Full Name *</label>
               <Input
                 type="text"
                 name="name"
@@ -175,14 +190,12 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Department *
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Department *</label>
               <select
                 name="departmentId"
                 value={formData.departmentId}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                className="w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
               >
                 <option value="">Select Department</option>
                 {departments.map((dept) => (
@@ -194,14 +207,12 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Position
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Position</label>
               <select
                 name="position"
                 value={formData.position}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                className="w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
               >
                 {POSITIONS.map((pos) => (
                   <option key={pos} value={pos}>
@@ -212,9 +223,7 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Salary
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Salary</label>
               <Input
                 type="number"
                 name="salary"
@@ -225,9 +234,7 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Joining Date
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Joining Date</label>
               <Input
                 type="date"
                 name="joiningDate"
@@ -244,7 +251,7 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
                 name="employmentType"
                 value={formData.employmentType}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                className="w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
               >
                 <option value="full-time">Full Time</option>
                 <option value="part-time">Part Time</option>
@@ -253,10 +260,8 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
               </select>
             </div>
 
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Phone Number
-              </label>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-2">Phone Number</label>
               <Input
                 type="tel"
                 name="phone"
@@ -268,25 +273,20 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-            >
+          <div className="flex gap-3 pt-5 border-t edge">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="flex-1 brand text-white border edge"
             >
-              {loading ? 'Adding...' : 'Add Employee'}
+              {loading ? 'Adding…' : 'Add Employee'}
             </Button>
           </div>
         </form>
       </div>
     </div>
-  );
+  )
 }

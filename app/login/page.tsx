@@ -1,47 +1,47 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAppDispatch, useAppSelector } from '@/lib/redux/store';
-import { loginUser, clearAuthError } from '@/lib/redux/slices/authSlice';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
+import { loginUser, clearAuthError } from '@/lib/redux/slices/authSlice'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export default function LoginPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.auth);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [localError, setLocalError] = useState('');
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const { loading, error } = useAppSelector((state) => state.auth)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [localError, setLocalError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError('');
-    dispatch(clearAuthError());
+    e.preventDefault()
+    setLocalError('')
+    dispatch(clearAuthError())
 
-    const result = await dispatch(loginUser({ email, password }));
+    const result = await dispatch(loginUser({ email, password }))
     if (loginUser.fulfilled.match(result)) {
-      router.push('/');
+      router.push('/')
     }
-  };
+  }
 
   const handleDemoFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setLocalError('');
-    dispatch(clearAuthError());
-  };
+    setEmail(demoEmail)
+    setPassword(demoPass)
+    setLocalError('')
+    dispatch(clearAuthError())
+  }
 
-  const displayError = localError || error;
+  const displayError = localError || error
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 px-4">
+    <div className="min-h-screen flex items-center justify-center auth-canvas px-4">
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg mb-4 shadow-lg shadow-blue-500/25">
+          <div className="inline-flex items-center justify-center w-14 h-14 brand rounded-lg mb-4 shadow-lg shadow-black/20">
             <svg
               className="w-8 h-8 text-white"
               fill="none"
@@ -102,7 +102,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+              className="w-full brand text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
@@ -111,7 +111,10 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-center text-muted-foreground text-sm">
               Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
+              <Link
+                href="/signup"
+                className="brand-text hover:brightness-110 dark:brand-text font-semibold"
+              >
                 Sign up
               </Link>
             </p>
@@ -120,12 +123,14 @@ export default function LoginPage() {
 
         {/* Demo Credentials Helper */}
         <div className="mt-6 bg-card/60 backdrop-blur border border-border rounded-xl p-4">
-          <p className="text-xs font-semibold text-foreground mb-3">Database Seed Demo Credentials (Click to fill):</p>
+          <p className="text-xs font-semibold text-foreground mb-3">
+            Database Seed Demo Credentials (Click to fill):
+          </p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button
               type="button"
               onClick={() => handleDemoFill('admin@techcorp.com', 'Password123!')}
-              className="text-left p-2 rounded border border-border/70 hover:bg-muted transition-colors"
+              className="rounded border border-border/70 p-2 text-left press transition-colors hover:bg-foreground/5"
             >
               <p className="font-semibold text-foreground">Admin</p>
               <p className="text-muted-foreground truncate">admin@techcorp.com</p>
@@ -133,7 +138,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => handleDemoFill('hr@techcorp.com', 'Password123!')}
-              className="text-left p-2 rounded border border-border/70 hover:bg-muted transition-colors"
+              className="rounded border border-border/70 p-2 text-left press transition-colors hover:bg-foreground/5"
             >
               <p className="font-semibold text-foreground">HR Manager</p>
               <p className="text-muted-foreground truncate">hr@techcorp.com</p>
@@ -142,5 +147,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

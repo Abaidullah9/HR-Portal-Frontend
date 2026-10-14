@@ -1,92 +1,56 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAppDispatch, useAppSelector } from '@/lib/redux/store';
-import { registerUser, clearAuthError } from '@/lib/redux/slices/authSlice';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
+import { registerUser, clearAuthError } from '@/lib/redux/slices/authSlice'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { GraduationCap } from 'lucide-react'
 
 export default function SignupPage() {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector((state) => state.auth);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    roleId: '',
-  });
-  const [localError, setLocalError] = useState('');
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const { loading, error } = useAppSelector((state) => state.auth)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [localError, setLocalError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError('');
-    dispatch(clearAuthError());
+    e.preventDefault()
+    setLocalError('')
+    dispatch(clearAuthError())
 
-    if (formData.password !== formData.confirmPassword) {
-      setLocalError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setLocalError('Password must be at least 6 characters');
-      return;
-    }
-
-    const payload = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      ...(formData.roleId ? { roleId: formData.roleId } : {}),
-    };
-
-    const result = await dispatch(registerUser(payload));
+    const result = await dispatch(registerUser({ name, email, password }))
     if (registerUser.fulfilled.match(result)) {
-      router.push('/');
+      router.push('/')
     }
-  };
+  }
 
-  const displayError = localError || error;
+  const displayError = localError || error
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center auth-canvas px-4">
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg mb-4 shadow-lg shadow-blue-500/25">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4.354a4 4 0 110 5.292M15 12H9m4 8H8m8 0h-4m4-4h-4m-8-4h4"
-              />
-            </svg>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl brand shadow-xl shadow-black/20 mb-5">
+            <GraduationCap size={32} className="text-white" strokeWidth={2} />
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full surface-solid p-0.5">
+              <GraduationCap size={10} className="text-foreground/65" />
+            </span>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Create Account</h1>
-          <p className="text-muted-foreground">Join the HR Portal</p>
+          <p className="text-foreground/60">Join your HR workspace today</p>
         </div>
 
         {/* Signup Form */}
-        <div className="bg-card rounded-2xl shadow-xl p-8 border border-border">
+        <div className="overflow-hidden rounded-2xl border edge bg-white/80 p-8 shadow-2xl shadow-black/5 backdrop-blur-xl dark:edge dark:surface-85">
           <form onSubmit={handleSubmit} className="space-y-5">
             {displayError && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
+              <div className="rounded-xl border danger-panel p-3 text-sm backdrop-blur-sm">
                 {displayError}
               </div>
             )}
@@ -97,11 +61,10 @@ export default function SignupPage() {
               </label>
               <Input
                 id="name"
-                name="name"
                 type="text"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={handleChange}
+                placeholder="Jane Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
                 className="w-full"
               />
@@ -113,11 +76,10 @@ export default function SignupPage() {
               </label>
               <Input
                 id="email"
-                name="email"
                 type="email"
                 placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full"
               />
@@ -129,27 +91,10 @@ export default function SignupPage() {
               </label>
               <Input
                 id="password"
-                name="password"
                 type="password"
                 placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-2">
-                Confirm Password
-              </label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full"
               />
@@ -158,22 +103,72 @@ export default function SignupPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+              className="w-full brand text-white border edge"
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? 'Creating account…' : 'Create account'}
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-center text-muted-foreground text-sm">
+          <div className="mt-6 pt-6 border-t edge">
+            <p className="text-center text-sm text-foreground/60">
               Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
+              <Link
+                href="/login"
+                className="brand-text font-semibold hover:brightness-110 dark:brand-text"
+              >
                 Sign in
               </Link>
             </p>
           </div>
         </div>
+
+        {/* Demo credentials helper */}
+        <div className="mt-6 overflow-hidden rounded-2xl border edge bg-white/50 p-4 shadow-lg shadow-black/5 backdrop-blur-md dark:edge dark:surface-50">
+          <p className="text-xs font-semibold text-foreground mb-3">
+            Demo Credentials (Click to fill):
+          </p>
+          <div className="grid gap-2 text-xs sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => {
+                setName('Admin User')
+                setEmail('admin@techcorp.com')
+                setPassword('Password123!')
+                setLocalError('')
+                dispatch(clearAuthError())
+              }}
+              className="flex items-start gap-3 rounded-xl border edge bg-white/60 px-3 py-2.5 text-left transition-colors hover:bg-white hover:text-foreground hover:shadow-md dark:edge dark:surface-50 dark:hover:bg-white/5"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg avatar-brand text-white text-[10px] font-semibold shadow-sm">
+                AD
+              </span>
+              <div>
+                <p className="font-semibold text-foreground">Admin</p>
+                <p className="text-foreground/65 truncate">admin@techcorp.com</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setName('HR Manager')
+                setEmail('hr@techcorp.com')
+                setPassword('Password123!')
+                setLocalError('')
+                dispatch(clearAuthError())
+              }}
+              className="flex items-start gap-3 rounded-xl border edge bg-white/60 px-3 py-2.5 text-left transition-colors hover:bg-white hover:text-foreground hover:shadow-md dark:edge dark:surface-50 dark:hover:bg-white/5"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg avatar-brand text-white text-[10px] font-semibold shadow-sm">
+                HR
+              </span>
+              <div>
+                <p className="font-semibold text-foreground">HR Manager</p>
+                <p className="text-foreground/65 truncate">hr@techcorp.com</p>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  );
+  )
 }

@@ -39,6 +39,10 @@ async function request<T, B = unknown>(
   const data: ApiResponse<T> = await response.json();
 
   if (!response.ok || !data.success) {
+    // Translate raw RBAC denial payloads into human-readable messages
+    if (response.status === 403) {
+      throw new Error('You do not have permission to perform this action.');
+    }
     throw new Error(data.message || `Request failed with status ${response.status}`);
   }
 

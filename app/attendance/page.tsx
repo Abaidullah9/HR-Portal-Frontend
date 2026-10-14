@@ -24,23 +24,23 @@ export default function AttendancePage() {
     dispatch(fetchEmployees())
   }, [dispatch])
 
-  // Filter records by date if chosen
   const filteredRecords = useMemo(() => {
     if (!selectedDate) return records
-    return records.filter((r) => r.date && r.date.startsWith(selectedDate))
+    return records.filter((r) => r.date?.startsWith(selectedDate))
   }, [records, selectedDate])
 
-  // Compute live statistics
   const stats = useMemo(() => {
-    const totalEmployees = employees.length || records.length || 1
+    const totalEmployees = employees.length || Math.max(records.length, 1)
     const presentCount = records.filter((r) => r.checkIn).length
     const lateCount = records.filter((r) => {
       if (!r.checkIn) return false
-      const checkInHour = new Date(r.checkIn).getHours()
-      return checkInHour >= 9 && new Date(r.checkIn).getMinutes() > 15
+      const hour = new Date(r.checkIn).getHours()
+      const minute = new Date(r.checkIn).getMinutes()
+      return hour >= 9 && (hour > 9 || minute > 15)
     }).length
     const absentCount = Math.max(0, totalEmployees - presentCount)
-    const checkInRate = ((presentCount / totalEmployees) * 100).toFixed(1)
+    const checkInRate =
+      totalEmployees > 0 ? ((presentCount / totalEmployees) * 100).toFixed(1) : '0.0'
 
     return [
       {
@@ -71,7 +71,6 @@ export default function AttendancePage() {
   }, [records, employees])
 
   const handleQuickCheckIn = async () => {
-    if (employees.length === 0) return
     const firstEmp = employees[0]
     if (!firstEmp) return
     await dispatch(
@@ -79,7 +78,7 @@ export default function AttendancePage() {
         employeeId: firstEmp._id,
         date: new Date().toISOString(),
         checkIn: new Date().toISOString(),
-      })
+      }),
     )
   }
 
@@ -94,7 +93,11 @@ export default function AttendancePage() {
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+      return new Date(dateStr).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     } catch {
       return dateStr
     }
@@ -102,16 +105,12 @@ export default function AttendancePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        {/* Header */}
+      <div className="space-y-10">
         <SectionHeader
           title="Attendance"
           description="Track and manage real-time employee attendance"
           action={
-            <Button 
-              onClick={handleQuickCheckIn}
-              className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            >
+            <Button onClick={handleQuickCheckIn} className="gap-2 brand text-white border edge">
               <Clock size={16} />
               Quick Check-in
             </Button>
@@ -119,46 +118,45 @@ export default function AttendancePage() {
         />
 
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
+          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
             {error}
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
-            <StatCard
-              key={stat.title}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              trend={stat.trend}
-            />
+            <StatCard key={stat.title} {...stat} />
           ))}
         </div>
 
-        {/* Date Filter */}
-        <div className="flex gap-4 items-center flex-wrap">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-muted-foreground">Filter by Date:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-background"
-            />
-          </div>
+        {/* Date filter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-medium text-foreground/60">Filter by date</span>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="h-10 w-44 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
+          />
           {selectedDate && (
-            <Button variant="ghost" size="sm" onClick={() => setSelectedDate('')}>
-              Clear Filter
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedDate('')}
+              className="text-foreground/60 hover:text-foreground"
+            >
+              Clear filter
             </Button>
           )}
         </div>
 
-        {/* Attendance Records Table */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        {/* Attendance records */}
+        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
           {loading && records.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">Loading attendance logs...</div>
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              Loading attendance logs…
+            </div>
           ) : filteredRecords.length > 0 ? (
             <DataTable<AttendanceRecord>
               columns={[
@@ -166,13 +164,15 @@ export default function AttendancePage() {
                   header: 'Employee',
                   accessor: 'employeeId',
                   render: (emp) =>
-                    typeof emp === 'object' && emp !== null ? emp.name : 'Diana Employee',
+                    typeof emp === 'object' && emp !== null && 'name' in emp
+                      ? emp.name
+                      : 'Unknown Employee',
                 },
                 {
                   header: 'Date',
                   accessor: 'date',
                   render: (date) => formatDate(date),
-                  className: 'text-muted-foreground text-sm',
+                  className: 'text-foreground/65 text-sm',
                 },
                 {
                   header: 'Check-in',
@@ -197,8 +197,9 @@ export default function AttendancePage() {
               data={filteredRecords}
             />
           ) : (
-            <div className="p-8 text-center text-muted-foreground">
-              No attendance records found. Click &quot;Quick Check-in&quot; to log attendance.
+            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
+              <p>No attendance records found.</p>
+              <p className="mt-1 text-xs">Click &quot;Quick Check-in&quot; to log attendance.</p>
             </div>
           )}
         </div>

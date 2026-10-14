@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { Badge } from '@/components/common/badge'
 import { DataTable } from '@/components/common/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Plus, Trash2 } from 'lucide-react'
+import { Search, Plus, Trash2, X } from 'lucide-react'
 import { AddEmployeeModal } from '@/components/employees/add-employee-modal'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchEmployees, fetchDepartments, deleteEmployee } from '@/lib/redux/slices/employeeSlice'
@@ -26,9 +26,10 @@ export default function EmployeesPage() {
   }, [dispatch])
 
   const filteredEmployees = employees.filter((emp: Employee) => {
-    const deptName = typeof emp.departmentId === 'object' && emp.departmentId !== null 
-      ? emp.departmentId.name 
-      : (emp.departmentId || '')
+    const deptName =
+      typeof emp.departmentId === 'object' && emp.departmentId !== null
+        ? emp.departmentId.name
+        : emp.departmentId || ''
     return (
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -42,21 +43,35 @@ export default function EmployeesPage() {
     setShowDeleteConfirm(null)
   }
 
-  const statusBadgeVariant = (isActive: boolean) => {
-    return isActive ? 'success' : 'destructive'
+  const statusVariant = (isActive: boolean) => (isActive ? 'success' : 'destructive')
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-7xl space-y-6">
+          <SectionHeader
+            title="Employee Directory"
+            description="Manage and view all employees in your organization"
+          />
+          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+            {error}
+          </div>
+        </div>
+      </AppLayout>
+    )
   }
 
   return (
     <AppLayout>
-      <div className="space-y-8">
+      <div className="space-y-10">
         {/* Header */}
         <SectionHeader
           title="Employee Directory"
           description="Manage and view all employees in your organization"
           action={
-            <Button 
+            <Button
               onClick={() => setIsModalOpen(true)}
-              className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="gap-2 brand text-white border edge"
             >
               <Plus size={18} />
               Add Employee
@@ -64,116 +79,124 @@ export default function EmployeesPage() {
           }
         />
 
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Search and Filters */}
-        <div className="flex gap-4 items-center">
-          <div className="flex-1 relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+        {/* Search */}
+        <div className="flex max-w-xl">
+          <div className="relative flex-1">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/60 transition-colors hover:text-foreground/70"
+            />
             <Input
-              placeholder="Search employees by name, email, or department..."
-              className="pl-10"
+              placeholder="Search by name, email, or department..."
+              className="pl-11"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Employees Table */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        {/* Table panel */}
+        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
           {loading && employees.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">Loading employees from server...</div>
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              Loading employees…
+            </div>
           ) : filteredEmployees.length > 0 ? (
-            <DataTable<Employee>
-              columns={[
-                {
-                  header: 'Code',
-                  accessor: 'employeeCode',
-                  className: 'font-mono text-xs text-muted-foreground',
-                },
-                {
-                  header: 'Name',
-                  accessor: 'name',
-                  className: 'font-semibold',
-                },
-                {
-                  header: 'Email',
-                  accessor: 'email',
-                  className: 'text-muted-foreground text-sm',
-                },
-                {
-                  header: 'Department',
-                  accessor: 'departmentId',
-                  render: (dept) => (typeof dept === 'object' && dept !== null ? dept.name : dept || 'General'),
-                },
-                {
-                  header: 'Position',
-                  accessor: 'position',
-                },
-                {
-                  header: 'Status',
-                  accessor: 'isActive',
-                  render: (isActive) => (
-                    <Badge variant={statusBadgeVariant(Boolean(isActive))}>
-                      {isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  ),
-                },
-                {
-                  header: '',
-                  accessor: '_id',
-                  render: (id) => (
-                    <div className="flex gap-1 justify-end">
-                      <div className="relative group">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                          onClick={() => setShowDeleteConfirm(id as string)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                        {showDeleteConfirm === id && (
-                          <div className="absolute right-0 top-10 z-50 bg-card border border-border rounded-lg shadow-lg p-3 w-48">
-                            <p className="text-sm font-semibold mb-3">Confirm deletion?</p>
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => setShowDeleteConfirm(null)}
-                                className="flex-1"
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="destructive" 
-                                onClick={() => handleDelete(id as string)}
-                                className="flex-1"
-                              >
-                                Delete
-                              </Button>
+            <>
+              <DataTable<Employee>
+                columns={[
+                  {
+                    header: 'Code',
+                    accessor: 'employeeCode',
+                    className: 'font-mono text-xs text-foreground/60',
+                  },
+                  {
+                    header: 'Name',
+                    accessor: 'name',
+                    className: 'font-semibold',
+                  },
+                  {
+                    header: 'Email',
+                    accessor: 'email',
+                    className: 'text-foreground/60 text-sm',
+                  },
+                  {
+                    header: 'Department',
+                    accessor: 'departmentId',
+                    render: (dept) =>
+                      typeof dept === 'object' && dept !== null ? dept.name : dept || 'General',
+                  },
+                  {
+                    header: 'Position',
+                    accessor: 'position',
+                  },
+                  {
+                    header: 'Status',
+                    accessor: 'isActive',
+                    render: (isActive) => (
+                      <Badge variant={statusVariant(Boolean(isActive))}>
+                        {isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    header: '',
+                    accessor: '_id',
+                    render: (id) => (
+                      <div className="flex justify-end">
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-8 w-8 text-foreground/60 hover:danger-text hover:danger-panel dark:text-foreground/65 dark:hover:danger-text"
+                            onClick={() => setShowDeleteConfirm(id as string)}
+                          >
+                            <Trash2 size={15} />
+                          </Button>
+                          {showDeleteConfirm === id && (
+                            <div className="absolute right-0 top-9 z-50 w-56 rounded-2xl border edge bg-white/95 p-4 backdrop-blur-xl shadow-2xl shadow-black/10 dark:edge dark:surface-95">
+                              <p className="font-semibold text-foreground">Confirm deletion?</p>
+                              <p className="mt-1 text-sm text-foreground/60">
+                                This employee will be permanently removed.
+                              </p>
+                              <div className="mt-4 flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowDeleteConfirm(null)}
+                                  className="flex-1"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDelete(id as string)}
+                                  className="flex-1"
+                                >
+                                  Delete
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ),
-                  className: 'text-right',
-                },
-              ]}
-              data={filteredEmployees}
-            />
+                    ),
+                    className: 'text-right',
+                  },
+                ]}
+                data={filteredEmployees}
+              />
+            </>
           ) : (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground mb-4">No employees found</p>
-              <Button 
+            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
+              <p className="mb-4">No employees found.</p>
+              <Button
                 onClick={() => setIsModalOpen(true)}
-                className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="gap-2 brand text-white border edge"
               >
                 <Plus size={18} />
                 Add First Employee
@@ -182,15 +205,15 @@ export default function EmployeesPage() {
           )}
         </div>
 
-        {/* Pagination info */}
         {filteredEmployees.length > 0 && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <p>Showing {filteredEmployees.length} of {employees.length} employees</p>
-          </div>
+          <p className="flex items-center justify-between text-sm text-foreground/65">
+            <span>
+              Showing {filteredEmployees.length} of {employees.length} employees
+            </span>
+          </p>
         )}
       </div>
 
-      {/* Add Employee Modal */}
       <AddEmployeeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </AppLayout>
   )

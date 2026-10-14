@@ -61,6 +61,22 @@ export const fetchTeams = createAsyncThunk<
   }
 });
 
+// Async Thunk: Update Organization Settings
+export const updateOrganizationSettings = createAsyncThunk<
+  OrganizationSetting,
+  Partial<Pick<OrganizationSetting, 'organizationName' | 'email' | 'phone' | 'address'>>,
+  { rejectValue: string }
+>('organization/updateOrganizationSettings', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await apiClient.patch<OrganizationSetting, typeof payload>('/organization-settings', payload);
+    if (!res.data) throw new Error('Update failed');
+    return res.data;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update settings';
+    return rejectWithValue(message);
+  }
+});
+
 export const organizationSlice = createSlice({
   name: 'organization',
   initialState,
@@ -83,6 +99,11 @@ export const organizationSlice = createSlice({
       .addCase(fetchOrganizationSettings.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload ?? 'Failed to load organization settings';
+      })
+
+      // updateOrganizationSettings
+      .addCase(updateOrganizationSettings.fulfilled, (state, action: PayloadAction<OrganizationSetting>) => {
+        state.settings = action.payload;
       })
 
       // fetchOrgDepartments

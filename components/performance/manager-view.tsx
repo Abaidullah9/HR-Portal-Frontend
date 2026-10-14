@@ -1,145 +1,109 @@
 'use client'
 
-import { StatCard } from '@/components/common/stat-card'
 import { Badge } from '@/components/common/badge'
-import { Button } from '@/components/ui/button'
+import { StatCard } from '@/components/common/stat-card'
 import { DataTable } from '@/components/common/data-table'
-import { Input } from '@/components/ui/input'
-import {
-  Users,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Search,
-  Plus,
-  FileText,
-} from 'lucide-react'
+import { useAppSelector } from '@/lib/redux/store'
+import { Users, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Appraisal } from '@/types/performance'
 
-const managerStats = [
-  {
-    title: 'Team Members',
-    value: '8',
-    icon: Users,
-    trend: { direction: 'up' as const, percentage: 0 },
-  },
-  {
-    title: 'Appraisals Completed',
-    value: '5',
-    icon: CheckCircle,
-    trend: { direction: 'up' as const, percentage: 62 },
-  },
-  {
-    title: 'Pending Review',
-    value: '3',
-    icon: Clock,
-    trend: { direction: 'down' as const, percentage: 33 },
-  },
-  {
-    title: 'Team Avg Rating',
-    value: '4.2',
-    icon: AlertCircle,
-    trend: { direction: 'up' as const, percentage: 5 },
-  },
-]
+const resolveId = (v: string | { _id: string } | undefined) =>
+  typeof v === 'object' && v !== null ? v._id : v
 
-const teamMembers = [
-  {
-    id: 1,
-    name: 'Sarah Anderson',
-    department: 'Engineering',
-    rating: '4.5',
-    status: 'completed',
-    date: 'Dec 10, 2024',
-    lastReview: '6 months ago',
-  },
-  {
-    id: 2,
-    name: 'Michael Chen',
-    department: 'Engineering',
-    rating: '4.2',
-    status: 'completed',
-    date: 'Dec 8, 2024',
-    lastReview: '6 months ago',
-  },
-  {
-    id: 3,
-    name: 'Emma Watson',
-    department: 'Engineering',
-    rating: '--',
-    status: 'pending',
-    date: 'Due: Dec 20',
-    lastReview: '12 months ago',
-  },
-  {
-    id: 4,
-    name: 'James Thompson',
-    department: 'Engineering',
-    rating: '3.9',
-    status: 'completed',
-    date: 'Dec 5, 2024',
-    lastReview: '6 months ago',
-  },
-  {
-    id: 5,
-    name: 'Lisa Park',
-    department: 'Engineering',
-    rating: '--',
-    status: 'pending',
-    date: 'Due: Dec 22',
-    lastReview: '12 months ago',
-  },
-]
+const resolveName = (v: string | { _id: string; name?: string } | undefined) =>
+  typeof v === 'object' && v !== null ? v.name || 'Unknown' : 'Unknown'
 
-const upcomingReviews = [
-  { id: 1, employee: 'Emma Watson', dueDate: 'Dec 20, 2024', daysLeft: 4 },
-  { id: 2, employee: 'Lisa Park', dueDate: 'Dec 22, 2024', daysLeft: 6 },
-  { id: 3, employee: 'David Lee', dueDate: 'Dec 25, 2024', daysLeft: 9 },
-]
+interface TeamRow {
+  _id: string
+  employee: string
+  appraiser: string
+  rating: string
+  reviewDate: string
+  status: 'pending' | 'completed'
+}
 
 export function ManagerView() {
+  const { user } = useAppSelector((state) => state.auth)
+  const { appraisals, loading } = useAppSelector((state) => state.performance)
+
+  const managerId = user?._id
+
+  const teamAppraisals = managerId
+    ? appraisals.filter((a) => resolveId(a.appraiserId) === managerId)
+    : appraisals
+  const visibleAppraisals = teamAppraisals.length > 0 ? teamAppraisals : appraisals
+
+  const completed = visibleAppraisals.filter((a) => a.status === 'completed')
+  const pending = visibleAppraisals.filter((a) => a.status === 'pending')
+  const ratedAppraisals = completed.filter((a) => a.overallRating != null)
+  const avgRating =
+    ratedAppraisals.length > 0
+      ? (
+          ratedAppraisals.reduce((sum, a) => sum + (a.overallRating || 0), 0) /
+          ratedAppraisals.length
+        ).toFixed(1)
+      : '--'
+
+  const stats = [
+    { title: 'Team Appraisals', value: `${visibleAppraisals.length}`, icon: Users },
+    {
+      title: 'Appraisals Completed',
+      value: `${completed.length}`,
+      icon: CheckCircle,
+    },
+    { title: 'Pending Review', value: `${pending.length}`, icon: Clock },
+    { title: 'Team Avg Rating', value: avgRating, icon: AlertCircle },
+  ]
+
+  const rows: TeamRow[] = visibleAppraisals.map((a) => ({
+    _id: a._id,
+    employee: resolveName(a.employeeId),
+    appraiser: resolveName(a.appraiserId),
+    rating: a.overallRating != null ? `${a.overallRating}` : '--',
+    reviewDate: a.reviewDate ? new Date(a.reviewDate).toLocaleDateString() : '--',
+    status: a.status,
+  }))
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Manage Team Performance</h2>
-          <p className="text-muted-foreground mt-1">Appraise and develop your team members</p>
-        </div>
-        <Button>
-          <Plus size={16} className="mr-2" />
-          Start New Appraisal
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Manage Team Performance</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Appraisals you are responsible for reviewing
+        </p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {managerStats.map((stat) => (
-          <StatCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            trend={stat.trend}
-          />
+      {/* Key metrics */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
         ))}
       </div>
 
-      {/* Urgent Reminders */}
-      {upcomingReviews.length > 0 && (
-        <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+      {/* Pending alert */}
+      {pending.length > 0 && (
+        <div className="group overflow-hidden rounded-2xl border warning-panel p-5 backdrop-blur-md">
           <div className="flex items-start gap-3">
-            <AlertCircle size={20} className="text-warning shrink-0 mt-0.5" />
-            <div className="flex-1">
+            <span
+              className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl warning-panel warning-text"
+            >
+              <AlertCircle size={18} strokeWidth={2} />
+            </span>
+            <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-foreground">Pending Appraisals</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                You have {upcomingReviews.length} appraisals due this month
+              <p className="text-sm text-foreground/60 mt-1">
+                You have {pending.length} appraisal
+                {pending.length === 1 ? '' : 's'} awaiting review
               </p>
               <div className="mt-3 space-y-2">
-                {upcomingReviews.map((review) => (
-                  <div key={review.id} className="flex items-center justify-between text-sm">
-                    <span>{review.employee}</span>
+                {pending.slice(0, 5).map((a) => (
+                  <div key={a._id} className="flex items-center justify-between text-sm">
+                    <span className="text-foreground">{resolveName(a.employeeId)}</span>
                     <Badge variant="warning" className="text-xs">
-                      {review.daysLeft} days left
+                      {a.reviewDate
+                        ? `Due ${new Date(a.reviewDate).toLocaleDateString()}`
+                        : 'Unscheduled'}
                     </Badge>
                   </div>
                 ))}
@@ -149,92 +113,62 @@ export function ManagerView() {
         </div>
       )}
 
-      {/* Team Members Table */}
+      {/* Team appraisals */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold">Team Members</h3>
-            <p className="text-sm text-muted-foreground mt-1">Manage appraisals for your team</p>
-          </div>
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
-            <Input
-              placeholder="Search team members..."
-              className="pl-10 bg-background"
-            />
-          </div>
+        <div>
+          <h3 className="text-xl font-semibold text-foreground">Team Appraisals</h3>
+          <p className="mt-1 text-sm text-foreground/60">Review status for each appraisal cycle</p>
         </div>
 
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <DataTable
-            columns={[
-              { header: 'Name', accessor: 'name', className: 'font-medium' },
-              { header: 'Department', accessor: 'department', className: 'text-muted-foreground text-sm' },
-              {
-                header: 'Rating',
-                accessor: 'rating',
-                className: 'font-bold text-center',
-              },
-              {
-                header: 'Last Review',
-                accessor: 'lastReview',
-                className: 'text-muted-foreground text-sm',
-              },
-              {
-                header: 'Status',
-                accessor: 'status',
-                render: (status) => (
-                  <Badge
-                    variant={status === 'completed' ? 'success' : 'warning'}
-                    className="text-xs"
-                  >
-                    {status === 'completed' ? 'Completed' : 'Pending'}
-                  </Badge>
-                ),
-              },
-              {
-                header: 'Actions',
-                accessor: 'id',
-                render: (id) => (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs"
+        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
+          {loading && rows.length === 0 ? (
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              Loading appraisals…
+            </div>
+          ) : rows.length > 0 ? (
+            <DataTable<TeamRow>
+              columns={[
+                {
+                  header: 'Employee',
+                  accessor: 'employee',
+                  className: 'font-medium',
+                },
+                {
+                  header: 'Appraiser',
+                  accessor: 'appraiser',
+                  className: 'text-foreground/65 text-sm',
+                },
+                {
+                  header: 'Rating',
+                  accessor: 'rating',
+                  className: 'text-center font-bold text-foreground',
+                },
+                {
+                  header: 'Review Date',
+                  accessor: 'reviewDate',
+                  className: 'text-foreground/65 text-sm',
+                },
+                {
+                  header: 'Status',
+                  accessor: 'status',
+                  render: (status) => (
+                    <Badge
+                      variant={status === 'completed' ? 'success' : 'warning'}
+                      className="text-xs"
                     >
-                      <FileText size={14} className="mr-1" />
-                      Review
-                    </Button>
-                  </div>
-                ),
-                className: 'text-right',
-              },
-            ]}
-            data={teamMembers}
-          />
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="font-semibold mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Button variant="outline" size="sm" className="h-auto p-3 flex-col gap-1">
-            <FileText size={18} />
-            <span className="text-xs">Start Appraisal</span>
-          </Button>
-          <Button variant="outline" size="sm" className="h-auto p-3 flex-col gap-1">
-            <Users size={18} />
-            <span className="text-xs">View Team</span>
-          </Button>
-          <Button variant="outline" size="sm" className="h-auto p-3 flex-col gap-1">
-            <CheckCircle size={18} />
-            <span className="text-xs">My Feedback</span>
-          </Button>
-          <Button variant="outline" size="sm" className="h-auto p-3 flex-col gap-1">
-            <Clock size={18} />
-            <span className="text-xs">Reminders</span>
-          </Button>
+                      {status === 'completed' ? 'Completed' : 'Pending'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={rows}
+            />
+          ) : (
+            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
+              No appraisals found. Appraisals appear here once a performance cycle includes your
+              team.
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -53,130 +53,359 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ==========================================================================
+   PALETTES
+   Every surface, border, brand fill and status colour is derived from these
+   variables, so switching `data-palette` on <html> repaints the whole app.
+
+     1. midnight — Midnight Navy + Electric Blue   (dark, default)
+     2. indigo   — Dark Indigo + Violet            (dark, vivid)
+     3. slate    — White + Slate + Corporate Blue  (light)
+     4. emerald  — Charcoal + Emerald + Teal       (dark, calm)
+   ========================================================================== */
+
 :root {
   color-scheme: light;
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(224 71% 4%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(224 71% 4%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(224 71% 4%);
-  --primary: hsl(217 91% 60%);
-  --primary-foreground: hsl(0 0% 100%);
-  --secondary: hsl(246 68% 60%);
-  --secondary-foreground: hsl(0 0% 100%);
-  --muted: hsl(220 13% 91%);
-  --muted-foreground: hsl(215 16% 47%);
-  --accent: hsl(20 84% 61%);
-  --accent-foreground: hsl(0 0% 100%);
-  --destructive: hsl(0 84% 60%);
-  --border: hsl(220 13% 91%);
-  --input: hsl(220 13% 91%);
-  --ring: hsl(217 91% 60%);
-  --chart-1: hsl(217 91% 60%);
-  --chart-2: hsl(246 68% 60%);
-  --chart-3: hsl(262 80% 50%);
-  --chart-4: hsl(20 84% 61%);
-  --chart-5: hsl(142 71% 45%);
+
+  /* Default = palette 3 (White + Slate + Corporate Blue) */
+  --bg-rgb: 248 250 252;
+  --surface-rgb: 255 255 255;
+  --solid-rgb: 241 245 249;
+  --sidebar-rgb: 255 255 255;
+  --fg-rgb: 15 23 42;
+  --muted-fg-rgb: 100 116 139;
+  --edge-rgb: 15 23 42;
+  --edge-alpha: 0.1;
+  --brand-rgb: 37 99 235;
+  --brand-fg: 255 255 255;
+  --brand-gradient: linear-gradient(135deg, #2563eb, #1d4ed8);
+  --nav-active-gradient: linear-gradient(135deg, #2563eb, #4f46e5);
+  --avatar-gradient: linear-gradient(135deg, #4f46e5, #2563eb 60%, #1d4ed8);
+  --sidebar-glow: none;
+  --success-rgb: 5 150 105;
+  --warning-rgb: 217 119 6;
+  --danger-rgb: 225 29 72;
+  --info-rgb: 37 99 235;
+  /* Text variants: the fill colours above are tuned for backgrounds, these
+     for legibility (WCAG AA 4.5:1) on their own tinted surfaces. */
+  --success-text-rgb: 4 117 87;
+  --warning-text-rgb: 146 64 14;
+  --danger-text-rgb: 190 18 60;
+  --info-text-rgb: 30 64 175;
+  --chart-1: #2563eb;
+  --chart-2: #4f46e5;
+  --chart-3: #0f766e;
+  --chart-4: #d97706;
+  --chart-5: #e11d48;
   --radius: 0.75rem;
-  --success: hsl(142 71% 45%);
-  --success-foreground: hsl(0 0% 100%);
-  --warning: hsl(38 92% 50%);
-  --warning-foreground: hsl(0 0% 0%);
-  --info: hsl(200 100% 50%);
-  --info-foreground: hsl(0 0% 100%);
-  --sidebar: hsl(0 0% 100%);
-  --sidebar-foreground: hsl(224 71% 4%);
-  --sidebar-primary: hsl(217 91% 60%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(246 68% 60%);
-  --sidebar-accent-foreground: hsl(0 0% 100%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217 91% 60%);
+
+  /* ---- Tailwind token mappings (mode-agnostic; follow the palette) ---- */
+  --background: rgb(var(--bg-rgb));
+  --foreground: rgb(var(--fg-rgb));
+  --card: rgb(var(--surface-rgb));
+  --card-foreground: rgb(var(--fg-rgb));
+  --popover: rgb(var(--surface-rgb));
+  --popover-foreground: rgb(var(--fg-rgb));
+  --primary: rgb(var(--brand-rgb));
+  --primary-foreground: rgb(var(--brand-fg));
+  --secondary: rgb(var(--solid-rgb));
+  --secondary-foreground: rgb(var(--fg-rgb));
+  --muted: rgb(var(--solid-rgb));
+  --muted-foreground: rgb(var(--muted-fg-rgb));
+  --accent: rgb(var(--brand-rgb));
+  --accent-foreground: rgb(var(--brand-fg));
+  --destructive: rgb(var(--danger-rgb));
+  --border: rgb(var(--edge-rgb) / var(--edge-alpha));
+  --input: rgb(var(--edge-rgb) / var(--edge-alpha));
+  --ring: rgb(var(--brand-rgb));
+  --success: rgb(var(--success-rgb));
+  --success-foreground: 255 255 255;
+  --warning: rgb(var(--warning-rgb));
+  --warning-foreground: 255 255 255;
+  --info: rgb(var(--info-rgb));
+  --info-foreground: 255 255 255;
+  --sidebar: rgb(var(--sidebar-rgb));
+  --sidebar-foreground: rgb(var(--fg-rgb));
+  --sidebar-primary: rgb(var(--brand-rgb));
+  --sidebar-primary-foreground: rgb(var(--brand-fg));
+  --sidebar-accent: rgb(var(--brand-rgb));
+  --sidebar-accent-foreground: rgb(var(--brand-fg));
+  --sidebar-border: rgb(var(--edge-rgb) / var(--edge-alpha));
+  --sidebar-ring: rgb(var(--brand-rgb));
 }
 
-.dark {
+/* ---------------------------- 1. Midnight ------------------------------- */
+.dark,
+[data-palette='midnight'] {
   color-scheme: dark;
-  --background: hsl(224 71% 4%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(220 23% 12%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(220 23% 12%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(217 91% 60%);
-  --primary-foreground: hsl(224 71% 4%);
-  --secondary: hsl(246 68% 60%);
-  --secondary-foreground: hsl(224 71% 4%);
-  --muted: hsl(220 13% 23%);
-  --muted-foreground: hsl(215 14% 66%);
-  --accent: hsl(20 84% 61%);
-  --accent-foreground: hsl(224 71% 4%);
-  --destructive: hsl(0 84% 60%);
-  --border: hsl(220 13% 20%);
-  --input: hsl(220 13% 20%);
-  --ring: hsl(217 91% 60%);
-  --chart-1: hsl(217 91% 60%);
-  --chart-2: hsl(246 68% 60%);
-  --chart-3: hsl(262 80% 50%);
-  --chart-4: hsl(20 84% 61%);
-  --chart-5: hsl(142 71% 45%);
-  --success: hsl(142 71% 45%);
-  --success-foreground: hsl(224 71% 4%);
-  --warning: hsl(38 92% 50%);
-  --warning-foreground: hsl(224 71% 4%);
-  --info: hsl(200 100% 50%);
-  --info-foreground: hsl(224 71% 4%);
-  --sidebar: hsl(220 23% 10%);
-  --sidebar-foreground: hsl(0 0% 98%);
-  --sidebar-primary: hsl(217 91% 60%);
-  --sidebar-primary-foreground: hsl(224 71% 4%);
-  --sidebar-accent: hsl(246 68% 60%);
-  --sidebar-accent-foreground: hsl(224 71% 4%);
-  --sidebar-border: hsl(220 13% 20%);
-  --sidebar-ring: hsl(217 91% 60%);
+  --bg-rgb: 8 13 26;
+  --surface-rgb: 17 24 39;
+  --solid-rgb: 30 41 59;
+  --sidebar-rgb: 16 24 43;
+  --fg-rgb: 248 250 252;
+  --muted-fg-rgb: 161 170 185;
+  --edge-rgb: 148 163 184;
+  --edge-alpha: 0.16;
+  --brand-rgb: 37 99 235;
+  --brand-fg: 255 255 255;
+  --brand-gradient: linear-gradient(135deg, #2563eb, #1d4ed8);
+  --nav-active-gradient: linear-gradient(135deg, #2563eb, #4f46e5);
+  --avatar-gradient: linear-gradient(135deg, #4f46e5, #2563eb 60%, #1d4ed8);
+  --sidebar-glow: none;
+  --success-rgb: 16 185 129;
+  --warning-rgb: 245 158 11;
+  --danger-rgb: 244 63 94;
+  --info-rgb: 59 130 246;
+  --success-text-rgb: 16 185 129;
+  --warning-text-rgb: 245 158 11;
+  --danger-text-rgb: 251 113 133;
+  --info-text-rgb: 96 165 250;
+  --chart-1: #2563eb;
+  --chart-2: #60a5fa;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: hsl(224 71% 4%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(220 23% 12%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(220 23% 12%);
-    --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(217 91% 60%);
-    --primary-foreground: hsl(224 71% 4%);
-    --secondary: hsl(246 68% 60%);
-    --secondary-foreground: hsl(224 71% 4%);
-    --muted: hsl(220 13% 23%);
-    --muted-foreground: hsl(215 14% 66%);
-    --accent: hsl(20 84% 61%);
-    --accent-foreground: hsl(224 71% 4%);
-    --destructive: hsl(0 84% 60%);
-    --border: hsl(220 13% 20%);
-    --input: hsl(220 13% 20%);
-    --ring: hsl(217 91% 60%);
-    --chart-1: hsl(217 91% 60%);
-    --chart-2: hsl(246 68% 60%);
-    --chart-3: hsl(262 80% 50%);
-    --chart-4: hsl(20 84% 61%);
-    --chart-5: hsl(142 71% 45%);
-    --success: hsl(142 71% 45%);
-    --success-foreground: hsl(224 71% 4%);
-    --warning: hsl(38 92% 50%);
-    --warning-foreground: hsl(224 71% 4%);
-    --info: hsl(200 100% 50%);
-    --info-foreground: hsl(224 71% 4%);
-    --sidebar: hsl(220 23% 10%);
-    --sidebar-foreground: hsl(0 0% 98%);
-    --sidebar-primary: hsl(217 91% 60%);
-    --sidebar-primary-foreground: hsl(224 71% 4%);
-    --sidebar-accent: hsl(246 68% 60%);
-    --sidebar-accent-foreground: hsl(224 71% 4%);
-    --sidebar-border: hsl(220 13% 20%);
-    --sidebar-ring: hsl(217 91% 60%);
+/* ---------------------------- 2. Indigo --------------------------------- */
+[data-palette='indigo'] {
+  color-scheme: dark;
+  --bg-rgb: 12 13 24;
+  --surface-rgb: 12 13 24;
+  --solid-rgb: 30 32 52;
+  --sidebar-rgb: 12 13 24;
+  --fg-rgb: 248 250 252;
+  --muted-fg-rgb: 168 174 194;
+  --edge-rgb: 148 163 184;
+  --edge-alpha: 0.18;
+  --brand-rgb: 79 70 229;
+  --brand-fg: 255 255 255;
+  --brand-gradient: linear-gradient(135deg, #2563eb, #4f46e5);
+  --nav-active-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
+  --avatar-gradient: linear-gradient(135deg, #4f46e5, #2563eb 55%, #7c3aed);
+  --sidebar-glow:
+    radial-gradient(120% 80% at 12% 10%, hsl(217 95% 72% / 0.55), transparent 55%),
+    radial-gradient(90% 60% at 88% 10%, hsl(246 75% 78% / 0.45), transparent 55%);
+  --success-rgb: 16 185 129;
+  --warning-rgb: 245 158 11;
+  --danger-rgb: 244 63 94;
+  --info-rgb: 59 130 246;
+  --success-text-rgb: 16 185 129;
+  --warning-text-rgb: 245 158 11;
+  --danger-text-rgb: 251 113 133;
+  --info-text-rgb: 96 165 250;
+  --chart-1: #2563eb;
+  --chart-2: #4f46e5;
+  --chart-3: #8b5cf6;
+  --chart-4: #22d3ee;
+  --chart-5: #10b981;
+}
+
+/* ---------------------------- 3. Slate (light) --------------------------- */
+[data-palette='slate'] {
+  color-scheme: light;
+  --bg-rgb: 248 250 252;
+  --surface-rgb: 255 255 255;
+  --solid-rgb: 241 245 249;
+  --sidebar-rgb: 255 255 255;
+  --fg-rgb: 15 23 42;
+  --muted-fg-rgb: 100 116 139;
+  --edge-rgb: 15 23 42;
+  --edge-alpha: 0.1;
+  --brand-rgb: 37 99 235;
+  --brand-fg: 255 255 255;
+  --brand-gradient: linear-gradient(135deg, #2563eb, #1d4ed8);
+  --nav-active-gradient: linear-gradient(135deg, #2563eb, #4f46e5);
+  --avatar-gradient: linear-gradient(135deg, #4f46e5, #2563eb 60%, #1d4ed8);
+  --sidebar-glow: none;
+  --success-rgb: 5 150 105;
+  --warning-rgb: 217 119 6;
+  --danger-rgb: 225 29 72;
+  --info-rgb: 37 99 235;
+  /* Text variants: the fill colours above are tuned for backgrounds, these
+     for legibility (WCAG AA 4.5:1) on their own tinted surfaces. */
+  --success-text-rgb: 4 117 87;
+  --warning-text-rgb: 146 64 14;
+  --danger-text-rgb: 190 18 60;
+  --info-text-rgb: 30 64 175;
+  --chart-1: #2563eb;
+  --chart-2: #4f46e5;
+  --chart-3: #0f766e;
+  --chart-4: #d97706;
+  --chart-5: #e11d48;
+}
+
+/* ---------------------------- 4. Emerald -------------------------------- */
+[data-palette='emerald'] {
+  color-scheme: dark;
+  --bg-rgb: 10 15 13;
+  --surface-rgb: 18 26 23;
+  --solid-rgb: 30 41 36;
+  --sidebar-rgb: 14 21 19;
+  --fg-rgb: 241 245 249;
+  --muted-fg-rgb: 148 163 184;
+  --edge-rgb: 148 163 184;
+  --edge-alpha: 0.16;
+  --brand-rgb: 5 150 105;
+  --brand-fg: 255 255 255;
+  --brand-gradient: linear-gradient(135deg, #047857, #0f766e);
+  --nav-active-gradient: linear-gradient(135deg, #047857, #0f766e);
+  --avatar-gradient: linear-gradient(135deg, #065f46, #047857 55%, #0f766e);
+  --sidebar-glow: none;
+  --success-rgb: 16 185 129;
+  --warning-rgb: 245 158 11;
+  --danger-rgb: 244 63 94;
+  --info-rgb: 13 148 136;
+  --success-text-rgb: 16 185 129;
+  --warning-text-rgb: 245 158 11;
+  --danger-text-rgb: 251 113 133;
+  --info-text-rgb: 20 184 166;
+  --chart-1: #059669;
+  --chart-2: #14b8a6;
+  --chart-3: #22d3ee;
+  --chart-4: #f59e0b;
+  --chart-5: #f43f5e;
+}
+
+/* ============================== Utilities ================================ */
+
+/* Translucent panel surfaces (used for every card, table and modal). */
+@utility surface-40 {
+  background-color: rgb(var(--surface-rgb) / 0.4);
+}
+@utility surface-50 {
+  background-color: rgb(var(--surface-rgb) / 0.5);
+}
+@utility surface-60 {
+  background-color: rgb(var(--surface-rgb) / 0.6);
+}
+@utility surface-70 {
+  background-color: rgb(var(--surface-rgb) / 0.7);
+}
+@utility surface-75 {
+  background-color: rgb(var(--surface-rgb) / 0.75);
+}
+@utility surface-80 {
+  background-color: rgb(var(--surface-rgb) / 0.8);
+}
+@utility surface-85 {
+  background-color: rgb(var(--surface-rgb) / 0.85);
+}
+@utility surface-95 {
+  background-color: rgb(var(--surface-rgb) / 0.95);
+}
+@utility surface-solid {
+  background-color: rgb(var(--surface-rgb));
+}
+@utility surface-solid-muted {
+  background-color: rgb(var(--solid-rgb));
+}
+
+/* Hairline panel borders that stay subtle in both light and dark palettes. */
+@utility edge {
+  border-color: rgb(var(--edge-rgb) / var(--edge-alpha));
+}
+@utility edge-solid {
+  border-color: rgb(var(--surface-rgb));
+}
+
+/* Primary action fill — flat in the corporate palettes, gradient in indigo. */
+@utility brand {
+  background-image: var(--brand-gradient);
+  color: rgb(var(--brand-fg));
+  border: 1px solid rgb(255 255 255 / 0.14);
+  box-shadow: 0 10px 24px -14px rgb(var(--brand-rgb) / 0.75);
+}
+@utility brand-hover {
+  filter: brightness(1.06);
+}
+
+/* Active navigation pill keeps the vivid blue → indigo gradient. */
+@utility nav-active {
+  background-image: var(--nav-active-gradient);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  box-shadow: 0 12px 26px -16px rgb(var(--brand-rgb) / 0.9);
+}
+@utility avatar-brand {
+  background-image: var(--avatar-gradient);
+  color: rgb(var(--brand-fg));
+}
+
+/* Square icon tile on cards, stat headers and list rows. */
+@utility brand-tile {
+  background-image: var(--brand-gradient);
+  color: rgb(var(--brand-fg));
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 10px 22px -14px rgb(var(--brand-rgb) / 0.8);
+}
+
+/* Neutral icon tile that only picks up the palette's surface + text tones. */
+@utility soft-tile {
+  background-color: rgb(var(--solid-rgb) / 0.85);
+  color: rgb(var(--fg-rgb) / 0.75);
+  border: 1px solid rgb(var(--edge-rgb) / var(--edge-alpha));
+}
+
+/* Tinted fills for banners, tiles and focus rings — all palette derived. */
+@utility brand-tint {
+  background-color: rgb(var(--brand-rgb) / 0.1);
+  border-color: rgb(var(--brand-rgb) / 0.3);
+}
+@utility brand-text {
+  color: rgb(var(--brand-rgb));
+}
+@utility success-text {
+  color: rgb(var(--success-text-rgb));
+}
+@utility warning-text {
+  color: rgb(var(--warning-text-rgb));
+}
+@utility danger-text {
+  color: rgb(var(--danger-text-rgb));
+}
+@utility success-panel {
+  background-color: rgb(var(--success-rgb) / 0.09);
+  border-color: rgb(var(--success-rgb) / 0.3);
+  color: rgb(var(--success-text-rgb));
+}
+@utility warning-panel {
+  background-color: rgb(var(--warning-rgb) / 0.09);
+  border-color: rgb(var(--warning-rgb) / 0.3);
+}
+@utility danger-panel {
+  background-color: rgb(var(--danger-rgb) / 0.09);
+  border-color: rgb(var(--danger-rgb) / 0.3);
+  color: rgb(var(--danger-text-rgb));
+}
+@utility ring-brand {
+  --tw-ring-color: rgb(var(--brand-rgb) / 0.4);
+}
+@utility border-brand {
+  border-color: rgb(var(--brand-rgb) / 0.5);
+}
+
+/* ---- Interaction feedback -------------------------------------------------
+   Every clickable element compresses and tints on press so a click always
+   registers, and keyboard users get a palette-aware focus outline. */
+@utility press {
+  transform-origin: center;
+  &:active:not(:disabled) {
+    transform: scale(0.95);
   }
+}
+@utility press-sm {
+  transform-origin: center;
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+/* Auth screens: palette background with a soft brand wash. */
+@utility auth-canvas {
+  background-color: rgb(var(--bg-rgb));
+  background-image: radial-gradient(60% 50% at 15% 0%, rgb(var(--brand-rgb) / 0.16), transparent 60%),
+    radial-gradient(50% 45% at 85% 5%, rgb(var(--brand-rgb) / 0.1), transparent 60%);
 }
 
 @layer base {
@@ -186,7 +415,28 @@
   body {
     @apply bg-background text-foreground;
   }
-  
+
+  /* Fallback focus ring for anything focusable that has not shipped its own
+     indicator. Wrapped in :where() (zero specificity) so a component's own
+     ring — and its `focus:outline-none` opt-out — always wins, which keeps us
+     from ever painting two rings at once. */
+  :where(
+    a,
+    button,
+    summary,
+    input,
+    select,
+    textarea,
+    [role='option'],
+    [role='menuitem'],
+    [role='menuitemradio'],
+    [role='menuitemcheckbox'],
+    [tabindex]:not([tabindex='-1'])
+  ):focus-visible {
+    outline: 2px solid rgb(var(--brand-rgb) / 0.65);
+    outline-offset: 2px;
+  }
+
   h1 {
     @apply text-4xl font-bold tracking-tight;
   }
