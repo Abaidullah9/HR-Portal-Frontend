@@ -1,3 +1,4 @@
+import type { PaginationMeta } from '@/lib/api/client';
 import { Employee } from './employee';
 
 export interface AttendanceRecord {
@@ -24,6 +25,7 @@ export interface UpdateAttendancePayload {
 }
 
 export interface AttendanceState {
+  pagination: PaginationMeta;
   records: AttendanceRecord[];
   loading: boolean;
   error: string | null;

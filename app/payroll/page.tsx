@@ -1,87 +1,150 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { CheckCircle, DollarSign, Download, Plus, TrendingUp } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { StatCard } from '@/components/common/stat-card'
-import { Badge } from '@/components/common/badge'
-import { DataTable } from '@/components/common/data-table'
 import { Button } from '@/components/ui/button'
-import { DollarSign, TrendingUp, CheckCircle } from 'lucide-react'
+import { useToast } from '@/components/common/toast'
+import { usePermissions } from '@/lib/hooks/use-permissions'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchPayroll, updatePayrollStatus } from '@/lib/redux/slices/payrollSlice'
-import { EmployeePayroll } from '@/types/payroll'
+import { downloadCsv, toCsv } from '@/lib/csv'
+import { PAGE_SIZE, PICKER_LIMIT } from '@/lib/api/page'
+import { fetchPayrollSummary, type PayrollSummary } from '@/lib/api/insights'
+import { GeneratePayrollDialog } from './generate-payroll-dialog'
+import { PayslipDialog } from './payslip-dialog'
+import { PayrollTable } from './payroll-table'
+import { PayrollRunsPanel } from './payroll-runs-panel'
 
 export default function PayrollPage() {
   const dispatch = useAppDispatch()
-  const { records, loading, error } = useAppSelector((state) => state.payroll)
+  const toast = useToast()
+  const { can } = usePermissions()
+  const { records, loading, error, pagination } = useAppSelector((state) => state.payroll)
+  const [page, setPage] = useState(0)
+  const [markingId, setMarkingId] = useState<string | null>(null)
+  const [summary, setSummary] = useState<PayrollSummary | null>(null)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [payslipId, setPayslipId] = useState<string | null>(null)
+  const [runsKey, setRunsKey] = useState(0)
+
+  const loadSummary = useCallback(async () => {
+    try {
+      setSummary(await fetchPayrollSummary())
+      setSummaryError(null)
+    } catch (problem) {
+      setSummaryError(problem instanceof Error ? problem.message : 'Could not load totals')
+    }
+  }, [])
 
   useEffect(() => {
-    dispatch(fetchPayroll())
-  }, [dispatch])
+    void dispatch(fetchPayroll({ page: page + 1, limit: PAGE_SIZE }))
+  }, [dispatch, page])
 
-  const stats = useMemo(() => {
-    const totalPayroll = records.reduce((sum, r) => sum + (r.netPay || r.baseSalary || 0), 0)
-    const completedCount = records.filter((r) => r.status === 'completed').length
-    const completionRate =
-      records.length > 0 ? ((completedCount / records.length) * 100).toFixed(0) : '100'
+  useEffect(() => {
+    void loadSummary()
+  }, [loadSummary])
 
-    return [
-      {
-        title: 'Total Net Payroll',
-        value: `$${totalPayroll.toLocaleString()}`,
-        icon: DollarSign,
-        trend: { direction: 'up' as const, percentage: 5 },
-      },
-      {
-        title: 'Active Records',
-        value: records.length.toString(),
-        icon: TrendingUp,
-        trend: { direction: 'up' as const, percentage: 2 },
-      },
-      {
-        title: 'Processed Rate',
-        value: `${completionRate}%`,
-        icon: CheckCircle,
-        trend: { direction: 'up' as const, percentage: 1 },
-      },
-    ]
-  }, [records])
+  // Totals come from the API so they cover every record, not just this page.
+  const stats = [
+    {
+      title: 'Total net payroll',
+      value: summary ? `$${summary.totalNetPay.toLocaleString()}` : '--',
+      icon: DollarSign,
+    },
+    {
+      title: 'Records',
+      value: summary ? summary.totalRecords.toString() : '--',
+      icon: TrendingUp,
+    },
+    {
+      title: 'Processed rate',
+      value: summary ? `${summary.processedRate}%` : '--',
+      icon: CheckCircle,
+    },
+  ]
 
   const handleMarkCompleted = async (id: string) => {
-    await dispatch(updatePayrollStatus({ id, status: 'completed' }))
-  }
-
-  const getStatusBadge = (status: string) => {
-    if (status === 'completed') return <Badge variant="success">Completed</Badge>
-    if (status === 'failed') return <Badge variant="destructive">Failed</Badge>
-    return <Badge variant="warning">Pending</Badge>
-  }
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '--'
+    setMarkingId(id)
     try {
-      return new Date(dateStr).toLocaleDateString([], {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    } catch {
-      return dateStr
+      const result = await dispatch(updatePayrollStatus({ id, status: 'completed' }))
+      if (updatePayrollStatus.fulfilled.match(result)) toast('Marked as paid')
+      else toast('Could not update that record', 'error')
+    } finally {
+      setMarkingId(null)
+      setRunsKey((key) => key + 1)
+      await loadSummary()
     }
+  }
+
+  // The export covers the whole ledger, not the visible page, so it asks for the
+  // API's largest allowed limit rather than reusing the paged rows.
+  const exportCsv = async () => {
+    const result = await dispatch(fetchPayroll({ page: 1, limit: PICKER_LIMIT }))
+    if (!fetchPayroll.fulfilled.match(result)) {
+      toast('Could not load records to export', 'error')
+      return
+    }
+
+    const all = result.payload.data
+    const rows: (string | number)[][] = [
+      ['Employee', 'Base salary', 'Net pay', 'Period start', 'Payment method', 'Status'],
+      ...all.map((record) => [
+        typeof record.employeeId === 'object' &&
+        record.employeeId !== null &&
+        'name' in record.employeeId
+          ? record.employeeId.name
+          : 'Unknown',
+        record.baseSalary ?? '',
+        record.netPay ?? '',
+        record.payPeriodStart ?? '',
+        record.paymentMethod ?? '',
+        record.status ?? '',
+      ]),
+    ]
+    downloadCsv(`payroll-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows))
+    toast(`Exported ${all.length} record${all.length === 1 ? '' : 's'}`)
+
+    // The thunk just loaded the whole ledger over this page; restore it.
+    await dispatch(fetchPayroll({ page: page + 1, limit: PAGE_SIZE }))
   }
 
   return (
     <AppLayout>
       <div className="space-y-10">
         <SectionHeader
-          title="Payroll Management"
-          description="Manage salaries, allowances, deductions, and payment statuses"
+          title="Payroll management"
+          description="Manage salaries, allowances, deductions and payment statuses"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={exportCsv}
+                disabled={pagination.total === 0}
+                variant="outline"
+                className="gap-2"
+              >
+                <Download size={18} />
+                Export CSV
+              </Button>
+              {can('managePayroll') && (
+                <Button
+                  onClick={() => setGenerating(true)}
+                  className="gap-2 brand text-white border edge"
+                >
+                  <Plus size={18} />
+                  Generate period
+                </Button>
+              )}
+            </div>
+          }
         />
 
-        {error && (
-          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
-            {error}
+        {(error ?? summaryError) && (
+          <div role="alert" className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+            {error ?? summaryError}
           </div>
         )}
 
@@ -91,79 +154,46 @@ export default function PayrollPage() {
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
-          {loading && records.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading payroll records…
-            </div>
-          ) : records.length > 0 ? (
-            <DataTable<EmployeePayroll>
-              columns={[
-                {
-                  header: 'Employee',
-                  accessor: 'employeeId',
-                  render: (emp) =>
-                    typeof emp === 'object' && emp !== null && 'name' in emp
-                      ? emp.name
-                      : 'Unknown Employee',
-                },
-                {
-                  header: 'Base Salary',
-                  accessor: 'baseSalary',
-                  render: (val) => `$${Number(val).toLocaleString()}`,
-                },
-                {
-                  header: 'Net Pay',
-                  accessor: 'netPay',
-                  render: (val) => (
-                    <span className="font-semibold text-foreground">
-                      ${Number(val).toLocaleString()}
-                    </span>
-                  ),
-                },
-                {
-                  header: 'Period Start',
-                  accessor: 'payPeriodStart',
-                  render: (date) => formatDate(date),
-                  className: 'text-foreground/65 text-sm',
-                },
-                {
-                  header: 'Payment Method',
-                  accessor: 'paymentMethod',
-                  render: (m) => <span className="capitalize">{m}</span>,
-                },
-                {
-                  header: 'Status',
-                  accessor: 'status',
-                  render: (status) => getStatusBadge(status),
-                },
-                {
-                  header: 'Actions',
-                  accessor: '_id',
-                  render: (id, row) =>
-                    row.status === 'pending' ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkCompleted(id as string)}
-                        className="text-xs"
-                      >
-                        Mark Paid
-                      </Button>
-                    ) : null,
-                  className: 'text-right',
-                },
-              ]}
-              data={records}
-            />
-          ) : (
-            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
-              No payroll records found.
-            </div>
-          )}
-        </div>
+        <PayrollTable
+          records={records}
+          loading={loading}
+          markingId={markingId}
+          canMarkPaid={can('managePayroll')}
+          onMarkPaid={handleMarkCompleted}
+          onViewPayslip={setPayslipId}
+          pagination={{
+            page,
+            pageCount: pagination.totalPages,
+            total: pagination.total,
+            pageSize: PAGE_SIZE,
+            onPageChange: setPage,
+          }}
+        />
+
+        {can('managePayroll') && <PayrollRunsPanel refreshKey={runsKey} />}
       </div>
+
+      {payslipId && <PayslipDialog recordId={payslipId} onClose={() => setPayslipId(null)} />}
+
+      {generating && (
+        <GeneratePayrollDialog
+          onClose={() => setGenerating(false)}
+          onGenerated={async (result) => {
+            toast(
+              result.created > 0
+                ? `Created ${result.created} payroll record${result.created === 1 ? '' : 's'}${
+                    result.skipped > 0 ? `, skipped ${result.skipped}` : ''
+                  }`
+                : 'No new records: employees are already paid for this period or have no salary on file',
+              result.created > 0 ? 'success' : 'error',
+            )
+            setPage(0)
+            setRunsKey((key) => key + 1)
+            await dispatch(fetchPayroll({ page: 1, limit: PAGE_SIZE }))
+            await loadSummary()
+          }}
+        />
+      )}
     </AppLayout>
   )
 }

@@ -2,9 +2,12 @@
 
 import { Badge } from '@/components/common/badge'
 import { StatCard } from '@/components/common/stat-card'
-import { DataTable } from '@/components/common/data-table'
-import { useAppSelector } from '@/lib/redux/store'
-import { Users, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
+import { EmptyState } from '@/components/common/state-panel'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
+import { fetchAppraisals } from '@/lib/redux/slices/performanceSlice'
+import { ReviewWorkflow } from './review-workflow'
+import { Users, CheckCircle, Clock, AlertCircle, ClipboardList } from 'lucide-react'
 import { Appraisal } from '@/types/performance'
 
 const resolveId = (v: string | { _id: string } | undefined) =>
@@ -23,6 +26,7 @@ interface TeamRow {
 }
 
 export function ManagerView() {
+  const dispatch = useAppDispatch()
   const { user } = useAppSelector((state) => state.auth)
   const { appraisals, loading } = useAppSelector((state) => state.performance)
 
@@ -81,6 +85,23 @@ export function ManagerView() {
         ))}
       </div>
 
+      <section aria-labelledby="team-review-actions" className="space-y-4">
+        <div>
+          <h3 id="team-review-actions" className="text-xl font-semibold text-foreground">
+            Review actions
+          </h3>
+          <p className="mt-1 text-sm text-foreground/60">
+            Submit your written review for anyone whose self review is in. HR calibrates and locks
+            the result afterwards.
+          </p>
+        </div>
+        <ReviewWorkflow
+          appraisals={visibleAppraisals}
+          canManage
+          onChanged={() => void dispatch(fetchAppraisals())}
+        />
+      </section>
+
       {/* Pending alert */}
       {pending.length > 0 && (
         <div className="group overflow-hidden rounded-2xl border warning-panel p-5 backdrop-blur-md">
@@ -120,10 +141,11 @@ export function ManagerView() {
           <p className="mt-1 text-sm text-foreground/60">Review status for each appraisal cycle</p>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
+        <div className="panel overflow-hidden">
           {loading && rows.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading appraisals…
+            <div role="status" aria-busy="true">
+              <span className="sr-only">Loading appraisals</span>
+              <DataTableSkeleton rows={4} columns={5} />
             </div>
           ) : rows.length > 0 ? (
             <DataTable<TeamRow>
@@ -164,10 +186,11 @@ export function ManagerView() {
               data={rows}
             />
           ) : (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              No appraisals found. Appraisals appear here once a performance cycle includes your
-              team.
-            </div>
+            <EmptyState
+              icon={ClipboardList}
+              title="No team appraisals yet"
+              description="Appraisals appear here once a performance cycle includes people who report to you."
+            />
           )}
         </div>
       </div>

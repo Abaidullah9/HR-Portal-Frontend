@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { apiClient } from '@/lib/api/client';
+import { emptyPagination, pageQuery, PICKER_LIMIT, PAGE_SIZE, type Page, type PageArgs } from '@/lib/api/page';
 import {
   AttendanceRecord,
   CreateAttendancePayload,
@@ -8,6 +9,7 @@ import {
 } from '@/types/attendance';
 
 const initialState: AttendanceState = {
+  pagination: emptyPagination(PAGE_SIZE),
   records: [],
   loading: false,
   error: null,
@@ -15,13 +17,15 @@ const initialState: AttendanceState = {
 
 // Async Thunk: Fetch Attendance
 export const fetchAttendance = createAsyncThunk<
-  AttendanceRecord[],
-  void,
+  Page<AttendanceRecord>,
+  PageArgs | undefined,
   { rejectValue: string }
->('attendance/fetchAttendance', async (_, { rejectWithValue }) => {
+>('attendance/fetchAttendance', async (args, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<AttendanceRecord[]>('/attendance/paginated');
-    return res.data || [];
+    const res = await apiClient.get<AttendanceRecord[]>(
+        `/attendance/paginated${pageQuery({ page: args?.page, limit: args?.limit ?? PICKER_LIMIT, date: args?.date })}`,
+      );
+      return { data: res.data || [], pagination: res.pagination };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch attendance';
     return rejectWithValue(message);
@@ -75,9 +79,10 @@ export const attendanceSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchAttendance.fulfilled, (state, action: PayloadAction<AttendanceRecord[]>) => {
+      .addCase(fetchAttendance.fulfilled, (state, action: PayloadAction<Page<AttendanceRecord>>) => {
         state.loading = false;
-        state.records = action.payload;
+        state.records = action.payload.data;
+        state.pagination = action.payload.pagination ?? emptyPagination();
       })
       .addCase(fetchAttendance.rejected, (state, action) => {
         state.loading = false;

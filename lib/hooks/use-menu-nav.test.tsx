@@ -13,6 +13,7 @@ function Menu({ initialFocusSelector }: { initialFocusSelector?: string }) {
     open,
     containerRef: menuRef,
     triggerRef,
+    wrapperRef: containerRef,
     onClose: () => setOpen(false),
     initialFocusSelector,
   })
@@ -114,6 +115,27 @@ describe('useMenuNav', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
+  it('closes on Escape and returns focus to the trigger', () => {
+    render(<Menu />)
+    const trigger = openMenu()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('closes on a click outside the wrapper but not inside it', () => {
+    render(<Menu />)
+    openMenu()
+
+    fireEvent.mouseDown(screen.getByRole('menu'))
+    expect(screen.queryByRole('menu')).not.toBeNull()
+
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
   it('keeps focus on the first item across re-renders while open', () => {
     render(<Menu />)
     openMenu()
@@ -129,16 +151,18 @@ it('never strands focus on body when the menu unmounts', () => {
     const [open, setOpen] = useState(true)
     const menuRef = useRef<HTMLDivElement>(null)
     const triggerRef = useRef<HTMLButtonElement>(null)
+    const wrapperRef = useRef<HTMLDivElement>(null)
 
     useMenuNav({
       open,
       containerRef: menuRef,
       triggerRef,
+      wrapperRef,
       onClose: () => setOpen(false),
     })
 
     return (
-      <>
+      <div ref={wrapperRef}>
         <button type="button" ref={triggerRef}>
           Appearance
         </button>
@@ -152,7 +176,7 @@ it('never strands focus on body when the menu unmounts', () => {
             </button>
           </div>
         )}
-      </>
+      </div>
     )
   }
 

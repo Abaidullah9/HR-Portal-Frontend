@@ -12,7 +12,20 @@ export interface ApiResponse<T> {
   pagination?: PaginationMeta;
 }
 
-const API_BASE_URL =
+/** Fired when the API answers 401, so the shell can end the session. */
+export const SESSION_EXPIRED_EVENT = 'hr:session-expired';
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 async function request<T, B = unknown>(
@@ -36,14 +49,28 @@ async function request<T, B = unknown>(
   };
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  const data: ApiResponse<T> = await response.json();
+  const data: ApiResponse<T> = await response.json().catch(() => ({
+    success: false,
+    message: `Request failed with status ${response.status}`,
+  }));
 
   if (!response.ok || !data.success) {
+    // An expired cookie otherwise leaves the page rendering empty panels, so
+    // announce it once and let the shell redirect.
+    if (response.status === 401) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+      }
+      throw new ApiError('Your session has expired. Sign in again to continue.', 401);
+    }
     // Translate raw RBAC denial payloads into human-readable messages
     if (response.status === 403) {
-      throw new Error('You do not have permission to perform this action.');
+      throw new ApiError('You do not have permission to perform this action.', 403);
     }
-    throw new Error(data.message || `Request failed with status ${response.status}`);
+    throw new ApiError(
+      data.message || `Request failed with status ${response.status}`,
+      response.status,
+    );
   }
 
   return data;
@@ -61,4 +88,27 @@ export const apiClient = {
 
   delete: <T>(endpoint: string, headers?: Record<string, string>) =>
     request<T>(endpoint, { method: 'DELETE', headers }),
+
+  /**
+   * Authenticated file/blob download. Keeps the httpOnly session cookie and
+   * fails the same way the JSON methods do, so a 403 cannot be mistaken for a
+   * corrupt file.
+   */
+  download: async (endpoint: string): Promise<Blob> => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      if (response.status === 401 && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+      }
+      throw new ApiError(
+        response.status === 403
+          ? 'You do not have permission to download this file.'
+          : `Download failed with status ${response.status}`,
+        response.status,
+      );
+    }
+    return response.blob();
+  },
 };

@@ -24,7 +24,7 @@ export const fetchJobPostings = createAsyncThunk<
   { rejectValue: string }
 >('recruitment/fetchJobPostings', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<JobPosting[]>('/job-postings/paginated');
+    const res = await apiClient.get<JobPosting[]>('/job-postings/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch job postings';
@@ -39,7 +39,7 @@ export const fetchCandidates = createAsyncThunk<
   { rejectValue: string }
 >('recruitment/fetchCandidates', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Candidate[]>('/candidates/paginated');
+    const res = await apiClient.get<Candidate[]>('/candidates/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch candidates';
@@ -54,7 +54,7 @@ export const fetchInterviews = createAsyncThunk<
   { rejectValue: string }
 >('recruitment/fetchInterviews', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Interview[]>('/interviews/paginated');
+    const res = await apiClient.get<Interview[]>('/interviews/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch interviews';

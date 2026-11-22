@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { apiClient } from '@/lib/api/client';
+import { emptyPagination, pageQuery, PICKER_LIMIT, PAGE_SIZE, type Page, type PageArgs } from '@/lib/api/page';
 import {
   Employee,
   Department,
@@ -9,6 +10,7 @@ import {
 } from '@/types/employee';
 
 const initialState: EmployeeState = {
+  pagination: emptyPagination(PAGE_SIZE),
   employees: [],
   departments: [],
   selectedEmployee: null,
@@ -18,13 +20,15 @@ const initialState: EmployeeState = {
 
 // Async Thunk: Fetch Employees
 export const fetchEmployees = createAsyncThunk<
-  Employee[],
-  void,
+  Page<Employee>,
+  PageArgs | undefined,
   { rejectValue: string }
->('employees/fetchEmployees', async (_, { rejectWithValue }) => {
+>('employees/fetchEmployees', async (args, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Employee[]>('/employees/paginated');
-    return res.data || [];
+    const res = await apiClient.get<Employee[]>(
+        `/employees/paginated${pageQuery({ page: args?.page, limit: args?.limit ?? PICKER_LIMIT, search: args?.search })}`,
+      );
+      return { data: res.data || [], pagination: res.pagination };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch employees';
     return rejectWithValue(message);
@@ -38,10 +42,29 @@ export const fetchDepartments = createAsyncThunk<
   { rejectValue: string }
 >('employees/fetchDepartments', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Department[]>('/departments/paginated');
+    const res = await apiClient.get<Department[]>(`/departments/paginated${pageQuery({ limit: PICKER_LIMIT })}`);
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch departments';
+    return rejectWithValue(message);
+  }
+});
+
+// Async Thunk: Create Department
+export const createDepartment = createAsyncThunk<
+  Department,
+  { name: string; description?: string },
+  { rejectValue: string }
+>('employees/createDepartment', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await apiClient.post<Department, { name: string; description?: string }>(
+      '/departments',
+      payload,
+    );
+    if (!res.data) throw new Error('Department creation failed');
+    return res.data;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create department';
     return rejectWithValue(message);
   }
 });
@@ -111,9 +134,10 @@ export const employeeSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchEmployees.fulfilled, (state, action: PayloadAction<Employee[]>) => {
+      .addCase(fetchEmployees.fulfilled, (state, action: PayloadAction<Page<Employee>>) => {
         state.loading = false;
-        state.employees = action.payload;
+        state.employees = action.payload.data;
+        state.pagination = action.payload.pagination ?? emptyPagination();
       })
       .addCase(fetchEmployees.rejected, (state, action) => {
         state.loading = false;
@@ -123,6 +147,18 @@ export const employeeSlice = createSlice({
       // fetchDepartments
       .addCase(fetchDepartments.fulfilled, (state, action: PayloadAction<Department[]>) => {
         state.departments = action.payload;
+      })
+
+      // createDepartment — deliberately does not toggle `loading`, which the
+      // employee table relies on.
+      .addCase(createDepartment.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(createDepartment.fulfilled, (state, action: PayloadAction<Department>) => {
+        state.departments.push(action.payload);
+      })
+      .addCase(createDepartment.rejected, (state, action) => {
+        state.error = action.payload ?? 'Failed to create department';
       })
 
       // addEmployee

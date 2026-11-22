@@ -33,6 +33,13 @@ export interface Appraisal {
   skillsRating: SkillRating[];
   goals: Goal[];
   status: 'pending' | 'completed';
+  /** Review workflow: self → manager → calibration → completed, then locked. */
+  workflowStage?: 'self_review' | 'manager_review' | 'calibration' | 'completed';
+  selfReview?: string;
+  managerReview?: string;
+  calibrationNote?: string;
+  calibratedAt?: string;
+  lockedAt?: string;
 }
 
 export interface Feedback {

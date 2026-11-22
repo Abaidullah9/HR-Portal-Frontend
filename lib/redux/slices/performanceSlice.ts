@@ -23,7 +23,7 @@ export const fetchPerformanceCycles = createAsyncThunk<
   { rejectValue: string }
 >('performance/fetchPerformanceCycles', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<PerformanceCycle[]>('/performance-cycles/paginated');
+    const res = await apiClient.get<PerformanceCycle[]>('/performance-cycles/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch performance cycles';
@@ -38,7 +38,7 @@ export const fetchAppraisals = createAsyncThunk<
   { rejectValue: string }
 >('performance/fetchAppraisals', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Appraisal[]>('/appraisals/paginated');
+    const res = await apiClient.get<Appraisal[]>('/appraisals/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch appraisals';
@@ -53,7 +53,7 @@ export const fetchFeedback = createAsyncThunk<
   { rejectValue: string }
 >('performance/fetchFeedback', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Feedback[]>('/feedback/paginated');
+    const res = await apiClient.get<Feedback[]>('/feedback/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch feedback';

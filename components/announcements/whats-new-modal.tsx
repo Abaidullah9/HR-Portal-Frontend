@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
 
 const CURRENT_VERSION = '2.0.0'
@@ -12,37 +11,26 @@ const STORAGE_KEY = 'whats-new-dismissed-version'
 interface Feature {
   title: string
   description: string
-  icon: 'sparkles' | 'zap' | 'rocket'
 }
 
 const features: Feature[] = [
   {
-    title: 'New Dashboard Design',
-    description: 'Completely redesigned dashboard with better insights and modern UI',
-    icon: 'sparkles',
+    title: 'New dashboard',
+    description: 'Live workforce summary with recent activity and quick actions',
   },
   {
-    title: 'Advanced Filtering',
-    description: 'Powerful filtering options across all modules for better data management',
-    icon: 'zap',
+    title: 'Search from the header',
+    description: 'Press / to jump to search, then land straight in the filtered directory',
   },
   {
-    title: 'Performance Improvements',
-    description: 'Lightning-fast load times and smoother interactions throughout the app',
-    icon: 'rocket',
+    title: 'Four colour palettes',
+    description: 'Pick an appearance from the palette menu; it is remembered for next time',
   },
   {
-    title: 'Dark Mode Support',
-    description: 'Seamless dark mode experience for comfortable viewing',
-    icon: 'sparkles',
+    title: 'Departments and leave',
+    description: 'Create departments from the directory, and reject leave with a written reason',
   },
 ]
-
-const iconComponents = {
-  sparkles: Sparkles,
-  zap: () => null,
-  rocket: () => null,
-}
 
 export function WhatsNewModal() {
   const [isOpen, setIsOpen] = useState(false)
@@ -131,21 +119,13 @@ export function WhatsNewModal() {
           </div>
 
           {/* Footer */}
-          <div className="mt-6 border-t edge pt-6 flex gap-3">
-            <a
-              href="https://blog.example.com/v2"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center rounded-xl border edge bg-white/80 px-4 text-sm text-foreground hover:bg-white hover:shadow-md hover:shadow-black/10 dark:edge dark:surface-80"
-            >
-              Learn More
-            </a>
+          <div className="mt-6 border-t edge pt-6">
             <Button
               type="button"
               onClick={handleDismiss}
-              className="flex-1 brand text-white border edge"
+              className="w-full brand text-white border edge"
             >
-              Got it!
+              Got it
             </Button>
           </div>
         </div>

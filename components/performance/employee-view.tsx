@@ -1,25 +1,58 @@
 'use client'
 
+import { useCallback, useEffect, useState } from 'react'
+import { Award, MessageSquare, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/common/badge'
 import { StatCard } from '@/components/common/stat-card'
 import { useAppSelector } from '@/lib/redux/store'
-import { Award, TrendingUp, MessageSquare } from 'lucide-react'
+import { fetchMyAppraisals } from '@/lib/api/self'
+import type { Appraisal } from '@/types/performance'
+import { CompetencyPanel } from './competency-panel'
+import { GoalPanel } from './goal-panel'
+import { FeedbackPanel } from './feedback-panel'
+import { SelfReviewCard } from './self-review-card'
+import { GoalsLivePanel } from './goals-live-panel'
+
+const resolveId = (value: string | { _id: string } | undefined) =>
+  typeof value === 'object' && value !== null ? value._id : value
 
 export function EmployeeView() {
   const { user } = useAppSelector((state) => state.auth)
-  const { appraisals, feedback, loading } = useAppSelector((state) => state.performance)
+  const { feedback, loading: feedbackLoading } = useAppSelector((state) => state.performance)
 
-  const userId = user?._id
-  const resolveId = (v: string | { _id: string } | undefined) =>
-    typeof v === 'object' && v !== null ? v._id : v
+  const [reviews, setReviews] = useState<Appraisal[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
 
-  const myAppraisal = appraisals.find((a) => resolveId(a.employeeId) === userId) ?? null
+  // This endpoint is scoped on the server to the caller's own employee record,
+  // so its results are theirs by construction — no id matching against the
+  // login, which is a different document from the employee.
+  const loadReviews = useCallback(async () => {
+    try {
+      setReviews(await fetchMyAppraisals())
+    } catch {
+      setReviews([])
+    } finally {
+      setReviewsLoading(false)
+    }
+  }, [])
 
-  const myFeedback = feedback.filter((f) => resolveId(f.targetEmployeeId) === userId)
+  useEffect(() => {
+    void loadReviews()
+  }, [loadReviews])
+
+  // Newest first from the API.
+  const myAppraisal = reviews[0] ?? null
+  const myEmployeeId = resolveId(myAppraisal?.employeeId)
+  const myCycleId = resolveId(myAppraisal?.cycleId)
+  const myStage =
+    myAppraisal?.workflowStage ?? (myAppraisal?.status === 'completed' ? 'completed' : 'manager_review')
 
   const goals = myAppraisal?.goals ?? []
   const skills = myAppraisal?.skillsRating ?? []
-  const goalsCompleted = goals.filter((g) => g.completionStatus === 'completed').length
+  const goalsCompleted = goals.filter((goal) => goal.completionStatus === 'completed').length
+  const myFeedback = myEmployeeId
+    ? feedback.filter((item) => resolveId(item.targetEmployeeId) === myEmployeeId)
+    : []
 
   const metrics = [
     {
@@ -53,8 +86,8 @@ export function EmployeeView() {
                 Last Review: {new Date(myAppraisal.reviewDate).toLocaleDateString()}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-foreground/60">
-                No appraisal on file for your account yet.
+              <p className="mt-2 text-sm text-foreground/60" role="status">
+                {reviewsLoading ? 'Loading your appraisal…' : 'No appraisal on file for your account yet.'}
               </p>
             )}
           </div>
@@ -82,157 +115,17 @@ export function EmployeeView() {
         ))}
       </div>
 
-      {/* Competencies */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-xl font-semibold text-foreground">Competencies &amp; Skills</h3>
-          <p className="mt-1 text-sm text-foreground/60">
-            Your proficiency across key competencies
-          </p>
-        </div>
-        {skills.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {skills.map((comp) => (
-              <div
-                key={comp.skillName}
-                className="group flex flex-col gap-3 overflow-hidden rounded-2xl border edge bg-white/70 p-5 shadow-md shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-foreground">{comp.skillName}</p>
-                  <span className="text-lg font-bold text-foreground">{comp.skillRating}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
-                    <div
-                      className="h-full rounded-full brand transition-all duration-300 group-hover:scale-105"
-                      style={{ width: `${(comp.skillRating / 5) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-foreground/65">Target: {comp.targetRating}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-            {loading ? 'Loading skills data…' : 'No skill ratings recorded in your appraisal yet.'}
-          </div>
-        )}
-      </div>
+      {myAppraisal && myStage === 'self_review' && (
+        <SelfReviewCard appraisal={myAppraisal} onChanged={() => void loadReviews()} />
+      )}
 
-      {/* Goals */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-foreground">Performance Goals</h3>
-            <p className="mt-1 text-sm text-foreground/60">
-              {goals.length > 0
-                ? `${goalsCompleted} of ${goals.length} goals completed`
-                : 'Goals will appear once your appraisal includes them'}
-            </p>
-          </div>
-        </div>
-        {goals.length > 0 ? (
-          <div className="space-y-3">
-            {goals.map((goal, idx) => (
-              <div
-                key={`${goal.goalName}-${idx}`}
-                className="group flex items-start gap-4 overflow-hidden rounded-2xl border edge bg-white/70 p-5 shadow-md shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground">{goal.goalName}</p>
-                  <div className="mt-3 flex items-center gap-4">
-                    <div className="flex-1 max-w-[220px]">
-                      <div className="h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 group-hover:scale-x-105 ${
-                            goal.completionStatus === 'completed'
-                              ? 'bg-[rgb(var(--success-rgb))]'
-                              : 'brand'
-                          }`}
-                          style={{ width: `${goal.goalCompletionRate}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-sm font-medium text-foreground">
-                      {goal.goalCompletionRate}%
-                    </span>
-                    {goal.deadline && (
-                      <span className="text-xs text-foreground/65">
-                        {new Date(goal.deadline).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Badge
-                  variant={
-                    goal.completionStatus === 'completed'
-                      ? 'success'
-                      : goal.completionStatus === 'in_progress'
-                        ? 'info'
-                        : 'warning'
-                  }
-                  className="shrink-0"
-                >
-                  {goal.completionStatus === 'in_progress'
-                    ? 'In Progress'
-                    : goal.completionStatus.charAt(0).toUpperCase() +
-                      goal.completionStatus.slice(1)}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-            {loading ? 'Loading goals…' : 'No performance goals recorded yet.'}
-          </div>
-        )}
-      </div>
+      {myEmployeeId && myCycleId && (
+        <GoalsLivePanel employeeId={myEmployeeId} cycleId={myCycleId} title="Your cycle goals" />
+      )}
 
-      {/* Feedback */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-xl font-semibold text-foreground">360° Feedback</h3>
-          <p className="mt-1 text-sm text-foreground/60">Feedback from your team and managers</p>
-        </div>
-        {myFeedback.length > 0 ? (
-          <div className="space-y-3">
-            {myFeedback.map((item) => {
-              const reviewer =
-                typeof item.reviewerId === 'object' && item.reviewerId !== null
-                  ? item.reviewerId.name
-                  : 'Anonymous'
-              return (
-                <div
-                  key={item._id}
-                  className="group overflow-hidden rounded-2xl border edge bg-white/70 p-5 shadow-md shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground">{reviewer}</p>
-                      <p className="mt-0.5 text-sm capitalize text-foreground/65">
-                        {item.relationship}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-xs text-foreground/60">
-                      {item.date ? new Date(item.date).toLocaleDateString() : ''}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm text-foreground/80 italic">
-                    &ldquo;{item.comment}&rdquo;
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-            {loading
-              ? 'Loading feedback…'
-              : 'No feedback received yet. Request feedback from your peers to get started.'}
-          </div>
-        )}
-      </div>
+      <CompetencyPanel skills={skills} loading={reviewsLoading} />
+      <GoalPanel goals={goals} goalsCompleted={goalsCompleted} loading={reviewsLoading} />
+      <FeedbackPanel feedback={myFeedback} loading={feedbackLoading} />
     </div>
   )
 }

@@ -1,6 +1,13 @@
+export interface RoleAction {
+  _id: string;
+  actionName: string;
+}
+
 export interface RoleInfo {
   _id: string;
   roleName: string;
+  /** Populated by GET /users/me; the authoritative permission list. */
+  actions?: RoleAction[];
 }
 
 export interface AuthUser {

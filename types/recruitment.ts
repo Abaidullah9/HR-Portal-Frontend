@@ -24,6 +24,14 @@ export interface Candidate {
   status: 'applied' | 'screening' | 'interview' | 'offered' | 'hired' | 'rejected';
   resume?: string;
   notes?: string;
+  offer?: {
+    salary?: number;
+    currency?: string;
+    position?: string;
+    startDate?: string;
+    sentAt?: string;
+  };
+  hiredEmployeeId?: string;
 }
 
 export interface Interview {

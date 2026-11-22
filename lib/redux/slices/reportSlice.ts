@@ -19,7 +19,7 @@ export const fetchReports = createAsyncThunk<
   { rejectValue: string }
 >('reports/fetchReports', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Report[]>('/reports/paginated');
+    const res = await apiClient.get<Report[]>('/reports/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch reports';

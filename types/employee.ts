@@ -1,3 +1,4 @@
+import type { PaginationMeta } from '@/lib/api/client';
 export interface Department {
   _id: string;
   name: string;
@@ -48,6 +49,7 @@ export interface UpdateEmployeePayload {
 }
 
 export interface EmployeeState {
+  pagination: PaginationMeta;
   employees: Employee[];
   departments: Department[];
   selectedEmployee: Employee | null;

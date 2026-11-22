@@ -1,253 +1,185 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
-import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Calendar, CheckCircle, TrendingUp, Users, type LucideIcon } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
-import { StatCard } from '@/components/common/stat-card'
-import { DataTable } from '@/components/common/data-table'
-import { Badge } from '@/components/common/badge'
-import { SectionHeader } from '@/components/common/section-header'
-import { Button } from '@/components/ui/button'
-import {
-  Users,
-  Calendar,
-  CheckCircle,
-  TrendingUp,
-  ChevronRight,
-  Briefcase,
-  ClipboardList,
-} from 'lucide-react'
+import { StatCard, StatCardSkeleton } from '@/components/common/stat-card'
+import { ErrorState } from '@/components/common/state-panel'
+import { WelcomeBanner } from '@/components/dashboard/welcome-banner'
+import { RecentActivity, type ActivityItem } from '@/components/dashboard/recent-activity'
+import { QuickActions } from '@/components/dashboard/quick-actions'
+import { SetupChecklist } from '@/components/dashboard/setup-checklist'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
-import { fetchEmployees } from '@/lib/redux/slices/employeeSlice'
-import { fetchAttendance } from '@/lib/redux/slices/attendanceSlice'
+import { fetchDepartments, fetchEmployees } from '@/lib/redux/slices/employeeSlice'
 import { fetchLeaveRequests } from '@/lib/redux/slices/leaveSlice'
-
-interface ActivityItem {
-  id: string | number
-  employee: string
-  action: string
-  date: string
-  status: string
-}
-
-const QUICK_ACTIONS = [
-  {
-    label: 'Manage Employees',
-    description: 'Onboard new staff and view directory',
-    href: '/employees',
-    icon: Users,
-  },
-  {
-    label: 'Manage Leaves',
-    description: 'View and approve leave requests',
-    href: '/leaves',
-    icon: Calendar,
-  },
-  {
-    label: 'Run Payroll',
-    description: 'Process salaries and review summaries',
-    href: '/payroll',
-    icon: TrendingUp,
-  },
-  {
-    label: 'Attendance',
-    description: 'Track daily check-ins and check-outs',
-    href: '/attendance',
-    icon: CheckCircle,
-  },
-]
+import { fetchDashboardSummary, type DashboardSummary } from '@/lib/api/insights'
+import { PICKER_LIMIT } from '@/lib/api/page'
+import { canView, roleNameOf } from '@/lib/auth/roles'
 
 export default function Home() {
   const dispatch = useAppDispatch()
   const { user } = useAppSelector((state) => state.auth)
-  const { employees } = useAppSelector((state) => state.employee)
-  const { records: attendanceRecords } = useAppSelector((state) => state.attendance)
-  const { requests: leaveRequests } = useAppSelector((state) => state.leaves)
+  const employee = useAppSelector((state) => state.employee)
+  const leaves = useAppSelector((state) => state.leaves)
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+
+  // Waits for the session refresh to populate the role: fetching before that
+  // would ask for modules this role cannot read and fail the whole page.
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canSeeEmployees = roleReady && canView(user, 'employees')
+  const canSeeLeaves = roleReady && canView(user, 'leaves')
+
+  const loadDashboard = useCallback(() => {
+    // One 403 used to replace the entire dashboard with an error, so only the
+    // panels this role can read are requested. HR, for example, has no
+    // Attendance module and Manager has no Payroll.
+    if (canSeeEmployees) {
+      void dispatch(fetchEmployees({ limit: PICKER_LIMIT }))
+      void dispatch(fetchDepartments())
+    }
+    if (canSeeLeaves) void dispatch(fetchLeaveRequests({ limit: PICKER_LIMIT }))
+
+    // The cards count every record, not one page of the lists above, so their
+    // numbers stay correct once those tables page on the server.
+    if (roleReady) {
+      setSummaryLoading(true)
+      void fetchDashboardSummary()
+        .then((data) => {
+          setSummary(data)
+          setSummaryError(null)
+        })
+        .catch((problem: unknown) => {
+          setSummaryError(problem instanceof Error ? problem.message : 'Could not load totals')
+        })
+        .finally(() => setSummaryLoading(false))
+    }
+  }, [dispatch, roleReady, canSeeEmployees, canSeeLeaves])
 
   useEffect(() => {
-    dispatch(fetchEmployees())
-    dispatch(fetchAttendance())
-    dispatch(fetchLeaveRequests())
-  }, [dispatch])
+    loadDashboard()
+  }, [loadDashboard])
+
+  const error =
+    summaryError ??
+    (canSeeEmployees ? employee.error : null) ??
+    (canSeeLeaves ? leaves.error : null)
 
   const stats = useMemo(() => {
-    const total = employees.length
-    const active = employees.filter((e) => e.isActive !== false).length
-    const presentToday = attendanceRecords.filter((r) => r.checkIn).length
-    const onLeave = leaveRequests.filter((l) => l.leaveStatus === 'approved').length
+    const cards: { title: string; value: string; icon: LucideIcon }[] = []
 
-    return [
-      {
-        title: 'Total Employees',
-        value: total.toString(),
-        icon: Users,
-        trend: { direction: 'up' as const, percentage: 5 },
-      },
-      {
-        title: 'Present Today',
-        value: presentToday.toString(),
+    if (summary?.employees) {
+      cards.push({ title: 'Total employees', value: String(summary.employees.total), icon: Users })
+      cards.push({ title: 'Active staff', value: String(summary.employees.active), icon: TrendingUp })
+    }
+
+    if (summary?.attendance) {
+      cards.push({
+        title: 'Present today',
+        value: String(summary.attendance.presentToday),
         icon: CheckCircle,
-        trend: { direction: 'up' as const, percentage: 2 },
-      },
-      {
-        title: 'On Leave',
-        value: onLeave.toString(),
-        icon: Calendar,
-        trend: { direction: 'down' as const, percentage: 1 },
-      },
-      {
-        title: 'Active Staff',
-        value: active.toString(),
-        icon: TrendingUp,
-        trend: { direction: 'up' as const, percentage: 8 },
-      },
-    ]
-  }, [employees, attendanceRecords, leaveRequests])
+      })
+    }
+
+    if (summary?.leaves) {
+      cards.push({ title: 'On leave', value: String(summary.leaves.onLeave), icon: Calendar })
+    }
+
+    return cards
+  }, [summary])
 
   const recentActivities: ActivityItem[] = useMemo(() => {
     const activities: ActivityItem[] = []
 
-    leaveRequests.slice(0, 3).forEach((req) => {
-      const empName =
-        typeof req.employeeId === 'object' && req.employeeId !== null
-          ? req.employeeId.name
-          : 'Employee'
-      activities.push({
-        id: req._id,
-        employee: empName,
-        action: `Requested ${req.leaveType} leave`,
-        date: req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Recent',
-        status: req.leaveStatus,
+    if (canSeeLeaves) {
+      leaves.requests.slice(0, 3).forEach((request) => {
+        activities.push({
+          id: request._id,
+          employee:
+            typeof request.employeeId === 'object' && request.employeeId !== null
+              ? request.employeeId.name
+              : 'Employee',
+          action: `Requested ${request.leaveType} leave`,
+          date: request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'Recent',
+          status: request.leaveStatus,
+        })
       })
-    })
+    }
 
-    employees.slice(0, 2).forEach((emp) => {
-      activities.push({
-        id: `emp-${emp._id}`,
-        employee: emp.name,
-        action: `Joined as ${emp.position}`,
-        date: emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString() : 'Recent',
-        status: 'completed',
+    if (canSeeEmployees) {
+      employee.employees.slice(0, 2).forEach((record) => {
+        activities.push({
+          id: `emp-${record._id}`,
+          employee: record.name,
+          action: `Joined as ${record.position}`,
+          date: record.joiningDate ? new Date(record.joiningDate).toLocaleDateString() : 'Recent',
+          status: 'completed',
+        })
       })
-    })
+    }
 
     return activities
-  }, [leaveRequests, employees])
+  }, [canSeeLeaves, canSeeEmployees, leaves.requests, employee.employees])
 
   return (
     <AppLayout>
       <div className="space-y-10">
-        {/* Banner */}
-        <div className="rounded-2xl p-8 text-foreground border shadow-lg shadow-black/10">
-          <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center md:gap-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                Welcome back, {user?.name?.split(' ')[0] || 'User'}
-              </h1>
-              <p className="mt-2 max-w-xl text-sm text-foreground/60">
-                Here&apos;s what&apos;s happening across your HR workspace today.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 brand-text hover:brand-text dark: dark:brand-text"
-              >
-                <Briefcase size={16} />
-                See all activity
-              </Button>
-            </div>
+        <WelcomeBanner name={user?.name} />
+
+        {error ? (
+          /* One announcement for the whole dashboard: the requests back these
+             panels, so a failure here fails all of them. */
+          <div className="panel">
+            <ErrorState
+              title="Couldn't load your dashboard"
+              description={error}
+              onRetry={loadDashboard}
+            />
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
-
-        {/* Recent activities */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Recent Activity"
-            description="Latest updates and actions across your organization"
-          />
-          <div className="overflow-hidden rounded-2xl border edge bg-white/70 backdrop-blur-md shadow-xl shadow-black/5 dark:edge dark:surface-85">
-            {recentActivities.length > 0 ? (
-              <DataTable<ActivityItem>
-                columns={[
-                  {
-                    header: 'Employee',
-                    accessor: 'employee',
-                    className: 'font-semibold',
-                  },
-                  {
-                    header: 'Action',
-                    accessor: 'action',
-                  },
-                  {
-                    header: 'Date',
-                    accessor: 'date',
-                    className: 'text-foreground/65 text-sm',
-                  },
-                  {
-                    header: 'Status',
-                    accessor: 'status',
-                    render: (status) => (
-                      <Badge
-                        variant={
-                          status === 'completed' || status === 'approved'
-                            ? 'success'
-                            : status === 'rejected'
-                              ? 'destructive'
-                              : 'warning'
-                        }
-                      >
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </Badge>
-                    ),
-                  },
-                ]}
-                data={recentActivities}
+        ) : (
+          <>
+            {canSeeEmployees && !summaryLoading && employee.employees.length === 0 && (
+              <SetupChecklist
+                departmentCount={employee.departments.length}
+                employeeCount={summary?.employees?.total ?? 0}
+                leaveRequestCount={leaves.requests.length}
               />
-            ) : (
-              <div className="flex h-40 items-center justify-center text-sm text-foreground/60">
-                No recent activities yet.
-              </div>
             )}
-          </div>
-        </div>
 
-        {/* Quick actions */}
-        <div className="space-y-4">
-          <SectionHeader title="Quick Actions" description="Jump to the most used HR tools" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {QUICK_ACTIONS.map((action) => {
-              const Icon = action.icon
-              return (
-                <Link key={action.href} href={action.href} className="group block">
-                  <button
-                    type="button"
-                    className="flex w-full cursor-pointer items-center gap-4 rounded-2xl border edge bg-white/70 px-5 py-5 text-left shadow-xl shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/10 dark:edge dark:surface-80 active:scale-[0.98]"
+            {stats.length > 0 && (
+              /* The cards are h3s, so the section needs an h2 or the heading
+                 order jumps from the page h1 straight to h3. */
+              <section aria-labelledby="workforce-summary-heading">
+                <h2 id="workforce-summary-heading" className="sr-only">
+                  Workforce summary
+                </h2>
+                {summaryLoading ? (
+                  <div
+                    className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+                    role="status"
+                    aria-busy="true"
                   >
-                    <span className="brand-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                      <Icon size={20} />
-                    </span>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-foreground">{action.label}</span>
-                      <span className="text-sm text-foreground/60">{action.description}</span>
-                    </div>
-                    <ChevronRight
-                      size={18}
-                      className="ml-auto shrink-0 text-foreground/65 transition-transform group-hover:translate-x-1 group-hover:text-foreground/60"
-                    />
-                  </button>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+                    <span className="sr-only">Loading workforce summary</span>
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                    <StatCardSkeleton />
+                  </div>
+                ) : (
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                    {stats.map((stat) => (
+                      <StatCard key={stat.title} {...stat} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            <RecentActivity activities={recentActivities} loading={summaryLoading} />
+          </>
+        )}
+
+        <QuickActions />
       </div>
     </AppLayout>
   )

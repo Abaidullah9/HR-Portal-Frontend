@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { apiClient } from '@/lib/api/client';
+import { emptyPagination, pageQuery, PICKER_LIMIT, PAGE_SIZE, type Page, type PageArgs } from '@/lib/api/page';
 import {
   EmployeePayroll,
   CreatePayrollPayload,
@@ -7,6 +8,7 @@ import {
 } from '@/types/payroll';
 
 const initialState: PayrollState = {
+  pagination: emptyPagination(PAGE_SIZE),
   records: [],
   loading: false,
   error: null,
@@ -14,13 +16,15 @@ const initialState: PayrollState = {
 
 // Async Thunk: Fetch Payroll
 export const fetchPayroll = createAsyncThunk<
-  EmployeePayroll[],
-  void,
+  Page<EmployeePayroll>,
+  PageArgs | undefined,
   { rejectValue: string }
->('payroll/fetchPayroll', async (_, { rejectWithValue }) => {
+>('payroll/fetchPayroll', async (args, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<EmployeePayroll[]>('/payroll/paginated');
-    return res.data || [];
+    const res = await apiClient.get<EmployeePayroll[]>(
+        `/payroll/paginated${pageQuery({ page: args?.page, limit: args?.limit ?? PICKER_LIMIT })}`,
+      );
+      return { data: res.data || [], pagination: res.pagination };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch payroll';
     return rejectWithValue(message);
@@ -74,9 +78,10 @@ export const payrollSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchPayroll.fulfilled, (state, action: PayloadAction<EmployeePayroll[]>) => {
+      .addCase(fetchPayroll.fulfilled, (state, action: PayloadAction<Page<EmployeePayroll>>) => {
         state.loading = false;
-        state.records = action.payload;
+        state.records = action.payload.data;
+        state.pagination = action.payload.pagination ?? emptyPagination();
       })
       .addCase(fetchPayroll.rejected, (state, action) => {
         state.loading = false;

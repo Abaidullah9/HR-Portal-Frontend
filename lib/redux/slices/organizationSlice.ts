@@ -38,7 +38,7 @@ export const fetchOrgDepartments = createAsyncThunk<
   { rejectValue: string }
 >('organization/fetchOrgDepartments', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Department[]>('/departments/paginated');
+    const res = await apiClient.get<Department[]>('/departments/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch departments';
@@ -53,7 +53,7 @@ export const fetchTeams = createAsyncThunk<
   { rejectValue: string }
 >('organization/fetchTeams', async (_, { rejectWithValue }) => {
   try {
-    const res = await apiClient.get<Team[]>('/teams/paginated');
+    const res = await apiClient.get<Team[]>('/teams/paginated?limit=100');
     return res.data || [];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch teams';
@@ -64,7 +64,12 @@ export const fetchTeams = createAsyncThunk<
 // Async Thunk: Update Organization Settings
 export const updateOrganizationSettings = createAsyncThunk<
   OrganizationSetting,
-  Partial<Pick<OrganizationSetting, 'organizationName' | 'email' | 'phone' | 'address'>>,
+  Partial<
+    Pick<
+      OrganizationSetting,
+      'organizationName' | 'email' | 'phone' | 'address' | 'lateAfter'
+    >
+  >,
   { rejectValue: string }
 >('organization/updateOrganizationSettings', async (payload, { rejectWithValue }) => {
   try {

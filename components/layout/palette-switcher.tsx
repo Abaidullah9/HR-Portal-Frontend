@@ -43,6 +43,19 @@ export const PALETTES: PaletteOption[] = [
   },
 ]
 
+/**
+ * The picker previews the four palettes at once, so a single active token
+ * cannot express a swatch. Each palette's preview colours live in
+ * `globals.css` behind these classes and are read through `--swatch-1..4`,
+ * which keeps inline `style` objects out of the component.
+ */
+export const SWATCH_CLASS: Record<PaletteId, string> = {
+  midnight: 'swatch-set-midnight',
+  indigo: 'swatch-set-indigo',
+  slate: 'swatch-set-slate',
+  emerald: 'swatch-set-emerald',
+}
+
 /** Applies a palette to <html> and remembers it for the next visit. */
 export function applyPalette(id: PaletteId) {
   const root = document.documentElement
@@ -75,45 +88,21 @@ export function PaletteSwitcher() {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // The pre-paint script in app/layout.tsx has already resolved and applied the
+  // palette to <html>, so the picker reads that instead of re-deriving it.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) as PaletteId | null
-      if (stored && PALETTES.some((p) => p.id === stored)) {
-        setActive(stored)
-      } else {
-        setActive('midnight')
-      }
-    } catch {
-      setActive('midnight')
-    }
+    const applied = document.documentElement.dataset.palette as PaletteId | undefined
+    if (applied && PALETTES.some((option) => option.id === applied)) setActive(applied)
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false)
-        triggerRef.current?.focus()
-      }
-    }
-    const onPointerDown = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    document.addEventListener('mousedown', onPointerDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('mousedown', onPointerDown)
-    }
-  }, [open])
 
   const current = PALETTES.find((p) => p.id === active) ?? PALETTES[0]
 
-  // Arrow keys + roving focus inside the colour menu.
+  // Escape, Tab, arrows and outside clicks are handled by the shared hook.
   useMenuNav({
     open,
     containerRef: menuRef,
     triggerRef,
+    wrapperRef: containerRef,
     onClose: () => setOpen(false),
     initialFocusSelector: '[data-initial-focus]',
   })
@@ -135,19 +124,18 @@ export function PaletteSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          'flex h-10 items-center gap-2 rounded-xl border edge bg-white/50 px-2.5 text-foreground/70 press transition-all duration-200 hover:bg-white/80 hover:text-foreground hover:shadow-md hover:shadow-black/10 dark:surface-50 dark:text-foreground/60',
+          'flex h-10 items-center gap-2 rounded-xl border edge bg-white/50 px-2.5 text-foreground/70 press transition-all duration-200 hover:bg-white/80 hover:text-foreground hover:shadow-md hover:shadow-black/10 pointer-coarse:min-h-11 dark:surface-50 dark:text-foreground/60',
           open && 'bg-white/80 dark:surface-95',
         )}
       >
         <Palette size={18} />
-        <span className="flex items-center gap-0.5" aria-hidden="true">
-          {current.swatches.slice(0, 3).map((color) => (
-            <span
-              key={color}
-              className="h-3 w-3 rounded-full ring-1 ring-black/10"
-              style={{ backgroundColor: color }}
-            />
-          ))}
+        <span
+          className={cn('flex items-center gap-0.5', SWATCH_CLASS[current.id])}
+          aria-hidden="true"
+        >
+          <span className="h-3 w-3 rounded-full ring-1 ring-black/10 bg-[var(--swatch-1)]" />
+          <span className="h-3 w-3 rounded-full ring-1 ring-black/10 bg-[var(--swatch-2)]" />
+          <span className="h-3 w-3 rounded-full ring-1 ring-black/10 bg-[var(--swatch-3)]" />
         </span>
       </button>
 
@@ -178,16 +166,16 @@ export function PaletteSwitcher() {
                   )}
                 >
                   <span
-                    className="flex h-9 w-9 shrink-0 overflow-hidden rounded-lg ring-1 ring-black/10"
+                    className={cn(
+                      'flex h-9 w-9 shrink-0 overflow-hidden rounded-lg ring-1 ring-black/10',
+                      SWATCH_CLASS[option.id],
+                    )}
                     aria-hidden="true"
                   >
-                    {option.swatches.map((color) => (
-                      <span
-                        key={color}
-                        className="h-full flex-1"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
+                    <span className="h-full flex-1 bg-[var(--swatch-1)]" />
+                    <span className="h-full flex-1 bg-[var(--swatch-2)]" />
+                    <span className="h-full flex-1 bg-[var(--swatch-3)]" />
+                    <span className="h-full flex-1 bg-[var(--swatch-4)]" />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-semibold text-foreground">

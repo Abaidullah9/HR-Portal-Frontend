@@ -12,6 +12,8 @@ interface UseMenuNavArgs {
   containerRef: RefObject<HTMLElement | null>
   /** The control that opened the panel — focus returns here on Escape/Tab. */
   triggerRef: RefObject<HTMLElement | null>
+  /** Wraps the trigger and the panel; a click outside it dismisses the panel. */
+  wrapperRef: RefObject<HTMLElement | null>
   /** Dismisses the panel. */
   onClose: () => void
   /** Optional selector for the item that should take focus first (e.g. `:checked`). */
@@ -19,20 +21,19 @@ interface UseMenuNavArgs {
 }
 
 /**
- * Keyboard behaviour shared by the header dropdowns and the palette picker.
+ * Behaviour shared by the header dropdowns and the palette picker.
  *
  * - Opening lands focus on the first item, so the panel is immediately usable.
  * - ArrowUp/ArrowDown/Home/End move between items (roving focus).
- * - Escape and Tab dismiss the panel and hand focus back to the trigger, so
- *   keyboard users are never stranded on `<body>` after the panel unmounts.
- *
- * Escape/Tab only ever *close*: the outside-click dismissal lives with the
- * caller, which is the only place that knows which element opened the panel.
+ * - Escape, Tab and a click outside the wrapper dismiss the panel and hand
+ *   focus back to the trigger, so keyboard users are never stranded on
+ *   `<body>` after the panel unmounts.
  */
 export function useMenuNav({
   open,
   containerRef,
   triggerRef,
+  wrapperRef,
   onClose,
   initialFocusSelector,
 }: UseMenuNavArgs) {
@@ -92,8 +93,25 @@ export function useMenuNav({
       list[nextIndex]?.focus()
     }
 
+    // Escape and outside clicks go on the document: focus can sit outside the
+    // panel (after clicking a non-focusable spot inside it) and still close.
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      onCloseRef.current()
+      triggerRef.current?.focus()
+    }
+    const onPointerDown = (event: MouseEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) onCloseRef.current()
+    }
+
     container.addEventListener('keydown', onKeyDown)
-    return () => container.removeEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', onEscape)
+    document.addEventListener('mousedown', onPointerDown)
+    return () => {
+      container.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', onEscape)
+      document.removeEventListener('mousedown', onPointerDown)
+    }
     // `onClose` intentionally omitted — see onCloseRef.
-  }, [open, containerRef, triggerRef, initialFocusSelector])
+  }, [open, containerRef, triggerRef, wrapperRef, initialFocusSelector])
 }

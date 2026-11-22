@@ -3,8 +3,13 @@
 import { useEffect } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
-import { Building2, Mail, Phone, MapPin, Users } from 'lucide-react'
+import Link from 'next/link'
+import { Building2, GitBranch, Mail, Phone, MapPin, Users } from 'lucide-react'
+import { DataTableSkeleton } from '@/components/common/data-table'
+import { EmptyState } from '@/components/common/state-panel'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
+import { usePermissions } from '@/lib/hooks/use-permissions'
+import { HolidayCalendar } from '@/components/organization/holiday-calendar'
 import {
   fetchOrganizationSettings,
   fetchOrgDepartments,
@@ -16,6 +21,8 @@ export default function OrganizationPage() {
   const { settings, departments, teams, loading, error } = useAppSelector(
     (state) => state.organization,
   )
+  const { canView } = usePermissions()
+  const canManage = canView('organization')
 
   useEffect(() => {
     dispatch(fetchOrganizationSettings())
@@ -29,10 +36,18 @@ export default function OrganizationPage() {
         <SectionHeader
           title="Organization & Departments"
           description="View organizational hierarchy, department leaders, and active teams"
+          action={
+            <Link
+              href="/organization/chart"
+              className="inline-flex items-center gap-2 rounded-xl border edge px-4 py-2 text-sm font-medium hover:bg-foreground/5"
+            >
+              <GitBranch size={16} aria-hidden="true" /> View org chart
+            </Link>
+          }
         />
 
         {error && (
-          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+          <div role="alert" className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
             {error}
           </div>
         )}
@@ -77,8 +92,9 @@ export default function OrganizationPage() {
         <div>
           <h3 className="text-lg font-semibold text-foreground mb-4">Departments</h3>
           {loading && departments.length === 0 ? (
-            <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-              Loading departments…
+            <div role="status" aria-busy="true" className="panel overflow-hidden">
+              <span className="sr-only">Loading departments</span>
+              <DataTableSkeleton rows={2} columns={3} />
             </div>
           ) : departments.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-3">
@@ -104,11 +120,17 @@ export default function OrganizationPage() {
               ))}
             </div>
           ) : (
-            <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-              No departments found.
+            <div className="panel overflow-hidden">
+              <EmptyState
+                icon={Building2}
+                title="No departments yet"
+                description="Create a department from the employee directory to start grouping people."
+              />
             </div>
           )}
         </div>
+
+        <HolidayCalendar canManage={canManage} />
 
         {/* Teams */}
         {teams.length > 0 && (

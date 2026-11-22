@@ -1,3 +1,4 @@
+import type { PaginationMeta } from '@/lib/api/client';
 import { Employee } from './employee';
 
 export interface LeaveRequest {
@@ -39,6 +40,7 @@ export interface ApproveRejectLeavePayload {
 }
 
 export interface LeaveState {
+  pagination: PaginationMeta;
   requests: LeaveRequest[];
   balances: LeaveBalance[];
   loading: boolean;

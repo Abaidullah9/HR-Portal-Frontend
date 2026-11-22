@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { Badge } from '@/components/common/badge'
-import { DataTable } from '@/components/common/data-table'
+import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
+import { EmptyState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
 import { Plus, Briefcase, Users, Calendar } from 'lucide-react'
+import { usePermissions } from '@/lib/hooks/use-permissions'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import {
   fetchJobPostings,
@@ -14,6 +16,9 @@ import {
   fetchInterviews,
 } from '@/lib/redux/slices/recruitmentSlice'
 import { PostJobModal } from '@/components/recruitment/post-job-modal'
+import { AddCandidateDialog } from '@/components/recruitment/add-candidate-dialog'
+import { CandidatePipelineSection } from '@/components/recruitment/candidate-pipeline-section'
+import { formatDate } from '@/lib/utils'
 import { JobPosting } from '@/types/recruitment'
 
 export default function RecruitmentPage() {
@@ -21,7 +26,11 @@ export default function RecruitmentPage() {
   const { jobPostings, candidates, interviews, loading, error } = useAppSelector(
     (state) => state.recruitment,
   )
+  const { can } = usePermissions()
+  const canRecruit = can('manageRecruitment')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCandidateOpen, setIsCandidateOpen] = useState(false)
+  const { departments } = useAppSelector((state) => state.employee)
 
   useEffect(() => {
     dispatch(fetchJobPostings())
@@ -30,19 +39,6 @@ export default function RecruitmentPage() {
   }, [dispatch])
 
   const openPositionsCount = jobPostings.filter((j) => j.status === 'open').length
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '--'
-    try {
-      return new Date(dateStr).toLocaleDateString([], {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    } catch {
-      return dateStr
-    }
-  }
 
   const getStatusBadge = (status: string) => {
     if (status === 'open') return <Badge variant="success">Open</Badge>
@@ -57,18 +53,26 @@ export default function RecruitmentPage() {
           title="Recruitment & Hiring"
           description="Manage job postings, applicant pipelines, and interview schedules"
           action={
-            <Button
-              onClick={() => setIsModalOpen(true)}
-              className="gap-2 brand text-white border edge"
-            >
-              <Plus size={18} />
-              Post a Job
-            </Button>
+            canRecruit ? (
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setIsCandidateOpen(true)} variant="outline" className="gap-2">
+                  <Users size={18} />
+                  Add candidate
+                </Button>
+                <Button
+                  onClick={() => setIsModalOpen(true)}
+                  className="gap-2 brand text-white border edge"
+                >
+                  <Plus size={18} />
+                  Post a job
+                </Button>
+              </div>
+            ) : undefined
           }
         />
 
         {error && (
-          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+          <div role="alert" className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
             {error}
           </div>
         )}
@@ -112,8 +116,9 @@ export default function RecruitmentPage() {
             <h3 className="font-semibold text-foreground">Active Job Postings</h3>
           </div>
           {loading && jobPostings.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading job postings…
+            <div role="status" aria-busy="true">
+              <span className="sr-only">Loading job postings</span>
+              <DataTableSkeleton rows={4} columns={5} />
             </div>
           ) : jobPostings.length > 0 ? (
             <DataTable<JobPosting>
@@ -146,24 +151,45 @@ export default function RecruitmentPage() {
                   render: (status) => getStatusBadge(status),
                 },
               ]}
+              pageSize={10}
               data={jobPostings}
             />
           ) : (
-            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
-              <p className="mb-4">No job postings found.</p>
-              <Button
-                onClick={() => setIsModalOpen(true)}
-                className="gap-2 brand text-white border edge"
-              >
-                <Plus size={18} />
-                Post a Job
-              </Button>
-            </div>
+            <EmptyState
+              icon={Briefcase}
+              title="No job postings yet"
+              description="Post a role to start collecting candidates and scheduling interviews."
+              action={
+                canRecruit ? (
+                  <Button
+                    onClick={() => setIsModalOpen(true)}
+                    className="gap-2 brand text-white border edge"
+                  >
+                    <Plus size={18} />
+                    Post a job
+                  </Button>
+                ) : undefined
+              }
+            />
           )}
         </div>
       </div>
 
+      <CandidatePipelineSection
+        candidates={candidates}
+        interviews={interviews}
+        departments={departments}
+        canRecruit={canRecruit}
+        onAddCandidate={() => setIsCandidateOpen(true)}
+        onChanged={() => {
+          void dispatch(fetchCandidates())
+          void dispatch(fetchInterviews())
+          void dispatch(fetchJobPostings())
+        }}
+      />
+
       <PostJobModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddCandidateDialog isOpen={isCandidateOpen} onClose={() => setIsCandidateOpen(false)} />
     </AppLayout>
   )
 }

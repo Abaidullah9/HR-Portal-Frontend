@@ -1,3 +1,4 @@
+import type { PaginationMeta } from '@/lib/api/client';
 import { Employee } from './employee';
 
 export interface PayrollAllowance {
@@ -48,6 +49,7 @@ export interface CreatePayrollPayload {
 }
 
 export interface PayrollState {
+  pagination: PaginationMeta;
   records: EmployeePayroll[];
   loading: boolean;
   error: string | null;

@@ -1,11 +1,14 @@
 'use client'
 
+import { BarChart3, TrendingUp, Users, Zap } from 'lucide-react'
 import { Badge } from '@/components/common/badge'
 import { StatCard } from '@/components/common/stat-card'
-import { DataTable } from '@/components/common/data-table'
-import { useAppSelector } from '@/lib/redux/store'
-import { BarChart3, Users, TrendingUp, Zap } from 'lucide-react'
-import { PerformanceCycle } from '@/types/performance'
+import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
+import { EmptyState } from '@/components/common/state-panel'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
+import { fetchAppraisals } from '@/lib/redux/slices/performanceSlice'
+import { CycleList, type CycleRow } from './cycle-list'
+import { ReviewWorkflow } from './review-workflow'
 
 const resolveName = (v: string | { _id: string; name?: string } | undefined) =>
   typeof v === 'object' && v !== null ? v.name || 'Unknown' : 'Unknown'
@@ -16,6 +19,7 @@ function daysUntil(dateStr: string): number {
 }
 
 export function HRView() {
+  const dispatch = useAppDispatch()
   const { cycles, appraisals, loading } = useAppSelector((state) => state.performance)
 
   const totalCompleted = appraisals.filter((a) => a.status === 'completed').length
@@ -31,16 +35,12 @@ export function HRView() {
 
   const stats = [
     { title: 'Appraisal Cycles', value: `${cycles.length}`, icon: Zap },
-    {
-      title: 'Appraisals Completed',
-      value: `${totalCompleted}`,
-      icon: TrendingUp,
-    },
+    { title: 'Appraisals Completed', value: `${totalCompleted}`, icon: TrendingUp },
     { title: 'Appraisals Pending', value: `${totalPending}`, icon: Users },
     { title: 'Org Avg Rating', value: orgAvg, icon: BarChart3 },
   ]
 
-  const rows = cycles.map((cycle) => {
+  const rows: CycleRow[] = cycles.map((cycle) => {
     const cycleAppraisals = appraisals.filter(
       (a) =>
         (typeof a.cycleId === 'object' && a.cycleId !== null ? a.cycleId._id : a.cycleId) ===
@@ -76,96 +76,24 @@ export function HRView() {
         ))}
       </div>
 
-      {/* Cycles */}
-      <div className="space-y-4">
+      <CycleList rows={rows} loading={loading} />
+
+      <section aria-labelledby="review-actions-heading" className="space-y-4">
         <div>
-          <h3 className="text-xl font-semibold text-foreground">Appraisal Cycles</h3>
+          <h3 id="review-actions-heading" className="text-xl font-semibold text-foreground">
+            Review actions
+          </h3>
           <p className="mt-1 text-sm text-foreground/60">
-            All performance cycles and their completion status
+            Each appraisal offers the one action its stage allows: submit the manager review,
+            calibrate the rating, then lock it once complete.
           </p>
         </div>
-
-        {loading && cycles.length === 0 ? (
-          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-            Loading performance cycles…
-          </div>
-        ) : cycles.length === 0 ? (
-          <div className="flex h-48 items-center justify-center rounded-2xl border edge bg-white/70 p-8 text-sm text-foreground/65 backdrop-blur-md dark:edge dark:surface-85">
-            No appraisal cycles created yet.
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {rows.map((cycle) => {
-              const completionRate = cycle.total > 0 ? (cycle.completed / cycle.total) * 100 : 0
-              return (
-                <div
-                  key={cycle._id}
-                  className="group overflow-hidden rounded-2xl border edge bg-white/70 p-6 shadow-md shadow-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:edge dark:surface-85"
-                >
-                  <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
-                    <div>
-                      <h4 className="font-semibold text-lg text-foreground">{cycle.name}</h4>
-                      <p className="text-sm text-foreground/65">{cycle.period}</p>
-                    </div>
-                    <Badge
-                      variant={
-                        cycle.status === 'active'
-                          ? 'info'
-                          : cycle.status === 'completed'
-                            ? 'success'
-                            : 'warning'
-                      }
-                      className="text-xs"
-                    >
-                      {cycle.status === 'active' ? (
-                        <>
-                          <Zap size={12} className="mr-1 brand-text" />
-                          Active
-                          {cycle.daysLeft > 0 ? ` · ${cycle.daysLeft}d left` : ''}
-                        </>
-                      ) : (
-                        cycle.status.charAt(0).toUpperCase() + cycle.status.slice(1)
-                      )}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-foreground/65">Appraisals</p>
-                      <p className="mt-1 text-2xl font-bold text-foreground">{cycle.total}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-foreground/65">Completed</p>
-                      <p className="mt-1 text-2xl font-bold success-text">
-                        {cycle.completed}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-foreground/65">Pending</p>
-                      <p className="mt-1 text-2xl font-bold warning-text dark:warning-text">
-                        {cycle.pending}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-foreground/65">Completion</p>
-                      <p className="mt-1 text-2xl font-bold text-foreground">
-                        {completionRate.toFixed(0)}%
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
-                    <div
-                      className="h-full rounded-full brand transition-all duration-300"
-                      style={{ width: `${completionRate}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+        <ReviewWorkflow
+          appraisals={appraisals}
+          canManage
+          onChanged={() => void dispatch(fetchAppraisals())}
+        />
+      </section>
 
       {/* Appraisal records */}
       <div className="space-y-4">
@@ -176,17 +104,21 @@ export function HRView() {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
+        <div className="panel overflow-hidden">
           {loading && appraisals.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading appraisals…
+            <div role="status" aria-busy="true">
+              <span className="sr-only">Loading appraisals</span>
+              <DataTableSkeleton rows={5} columns={4} />
             </div>
           ) : appraisals.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              No appraisal records found.
-            </div>
+            <EmptyState
+              icon={BarChart3}
+              title="No appraisals recorded"
+              description="Appraisals appear here once a cycle is running and reviewers submit their ratings."
+            />
           ) : (
             <DataTable
+              caption="Appraisal records across the organization"
               columns={[
                 {
                   header: 'Employee',

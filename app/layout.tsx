@@ -2,6 +2,8 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import StoreProvider from '@/lib/redux/provider'
 import { ProtectedWrapper } from '@/components/layout/protected-wrapper'
+import { LanguageProvider } from '@/lib/i18n'
+import { ServiceWorkerRegister } from '@/components/layout/service-worker-register'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -41,7 +43,7 @@ export const viewport: Viewport = {
  */
 const paletteInitScript = `(function(){try{
 var stored=localStorage.getItem('hr-palette');
-if(!stored){stored=localStorage.getItem('theme')==='light'?'slate':'midnight';}
+if(!stored){var legacy=localStorage.getItem('theme');stored=legacy?(legacy==='light'?'slate':'midnight'):((window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'slate':'midnight');}
 var root=document.documentElement;
 root.setAttribute('data-palette',stored);
 if(stored==='slate'){root.classList.remove('dark');}else{root.classList.add('dark');}
@@ -61,9 +63,12 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: paletteInitScript }} />
       </head>
       <body className="antialiased">
-        <StoreProvider>
-          <ProtectedWrapper>{children}</ProtectedWrapper>
-        </StoreProvider>
+        <LanguageProvider>
+          <StoreProvider>
+            <ProtectedWrapper>{children}</ProtectedWrapper>
+          </StoreProvider>
+        </LanguageProvider>
+        <ServiceWorkerRegister />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

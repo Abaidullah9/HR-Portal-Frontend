@@ -1,107 +1,157 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { StatCard } from '@/components/common/stat-card'
-import { Badge } from '@/components/common/badge'
-import { DataTable } from '@/components/common/data-table'
 import { Button } from '@/components/ui/button'
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { useToast } from '@/components/common/toast'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
-import { fetchAttendance, recordAttendance } from '@/lib/redux/slices/attendanceSlice'
+import {
+  fetchAttendance,
+  recordAttendance,
+  updateAttendance,
+} from '@/lib/redux/slices/attendanceSlice'
 import { fetchEmployees } from '@/lib/redux/slices/employeeSlice'
-import { AttendanceRecord } from '@/types/attendance'
+import { dayKey } from '@/lib/attendance'
+import { PAGE_SIZE, PICKER_LIMIT } from '@/lib/api/page'
+import {
+  fetchAttendanceForDay,
+  fetchAttendanceSummary,
+  type AttendanceSummary,
+} from '@/lib/api/insights'
+import type { AttendanceRecord } from '@/types/attendance'
+import { AttendanceTable } from './attendance-table'
+import { CheckInBar } from './check-in-bar'
 
 export default function AttendancePage() {
   const dispatch = useAppDispatch()
-  const { records, loading, error } = useAppSelector((state) => state.attendance)
+  const toast = useToast()
+  const { records, loading, error, pagination } = useAppSelector((state) => state.attendance)
   const { employees } = useAppSelector((state) => state.employee)
-  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [page, setPage] = useState(0)
+  const [selectedDate, setSelectedDate] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [summary, setSummary] = useState<AttendanceSummary | null>(null)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  // The check-in bar needs today's record for every employee, which is not
+  // necessarily on the page the table is showing.
+  const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([])
+
+  const today = dayKey(new Date().toISOString())
+  // The summary already carries the organization's late threshold, so the page
+  // does not need a second request for it.
+  const lateAfter = summary?.lateAfter ?? '09:15'
+
+  const loadSummary = useCallback(async (date?: string) => {
+    try {
+      const data = await fetchAttendanceSummary(date)
+      setSummary(data)
+      setSummaryError(null)
+    } catch (problem) {
+      setSummaryError(problem instanceof Error ? problem.message : 'Could not load totals')
+    }
+  }, [])
+
+  const loadToday = useCallback(async () => {
+    try {
+      setTodayRecords(await fetchAttendanceForDay(today))
+    } catch {
+      setTodayRecords([])
+    }
+  }, [today])
 
   useEffect(() => {
-    dispatch(fetchAttendance())
-    dispatch(fetchEmployees())
-  }, [dispatch])
+    void dispatch(
+      fetchAttendance({ page: page + 1, limit: PAGE_SIZE, date: selectedDate || undefined }),
+    )
+  }, [dispatch, page, selectedDate])
 
-  const filteredRecords = useMemo(() => {
-    if (!selectedDate) return records
-    return records.filter((r) => r.date?.startsWith(selectedDate))
-  }, [records, selectedDate])
+  useEffect(() => {
+    void dispatch(fetchEmployees({ limit: PICKER_LIMIT }))
+    void loadToday()
+  }, [dispatch, loadToday])
 
+  useEffect(() => {
+    void loadSummary(selectedDate || undefined)
+  }, [loadSummary, selectedDate])
+
+  // The cards come from the server's totals, so they stay correct regardless of
+  // how many rows are loaded or filtered.
   const stats = useMemo(() => {
-    const totalEmployees = employees.length || Math.max(records.length, 1)
-    const presentCount = records.filter((r) => r.checkIn).length
-    const lateCount = records.filter((r) => {
-      if (!r.checkIn) return false
-      const hour = new Date(r.checkIn).getHours()
-      const minute = new Date(r.checkIn).getMinutes()
-      return hour >= 9 && (hour > 9 || minute > 15)
-    }).length
-    const absentCount = Math.max(0, totalEmployees - presentCount)
-    const checkInRate =
-      totalEmployees > 0 ? ((presentCount / totalEmployees) * 100).toFixed(1) : '0.0'
-
+    const unknown = '--'
     return [
       {
-        title: 'Present Today',
-        value: presentCount.toString(),
+        title: selectedDate ? 'Present that day' : 'Present today',
+        value: summary ? String(summary.present) : unknown,
         icon: CheckCircle,
-        trend: { direction: 'up' as const, percentage: 5 },
       },
       {
         title: 'Absent',
-        value: absentCount.toString(),
+        value: summary ? String(summary.absent) : unknown,
         icon: XCircle,
-        trend: { direction: 'down' as const, percentage: 2 },
       },
       {
-        title: 'Late Arrivals',
-        value: lateCount.toString(),
+        title: 'Late arrivals',
+        value: summary ? String(summary.late) : unknown,
         icon: AlertCircle,
-        trend: { direction: 'down' as const, percentage: 1 },
       },
       {
-        title: 'Check-in Rate',
-        value: `${checkInRate}%`,
+        title: 'Check-in rate',
+        value: summary?.checkInRate != null ? `${summary.checkInRate}%` : unknown,
         icon: Clock,
-        trend: { direction: 'up' as const, percentage: 3 },
       },
     ]
-  }, [records, employees])
+  }, [summary, selectedDate])
 
-  const handleQuickCheckIn = async () => {
-    const firstEmp = employees[0]
-    if (!firstEmp) return
+  const refresh = async () => {
     await dispatch(
-      recordAttendance({
-        employeeId: firstEmp._id,
-        date: new Date().toISOString(),
-        checkIn: new Date().toISOString(),
-      }),
+      fetchAttendance({ page: page + 1, limit: PAGE_SIZE, date: selectedDate || undefined }),
     )
+    await Promise.all([loadSummary(selectedDate || undefined), loadToday()])
   }
 
-  const formatTime = (timeStr?: string) => {
-    if (!timeStr) return '--'
+  const handleCheckIn = async (employeeId: string) => {
+    const now = new Date()
+    setBusy(true)
     try {
-      return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return timeStr
+      const result = await dispatch(
+        recordAttendance({
+          employeeId,
+          date: now.toISOString(),
+          checkIn: now.toISOString(),
+        }),
+      )
+      if (recordAttendance.fulfilled.match(result)) {
+        toast('Checked in')
+        await refresh()
+      } else {
+        toast('Could not log that check-in', 'error')
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
-  const formatDate = (dateStr: string) => {
+  const handleCheckOut = async (recordId: string) => {
+    setBusy(true)
     try {
-      return new Date(dateStr).toLocaleDateString([], {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    } catch {
-      return dateStr
+      const result = await dispatch(
+        updateAttendance({ id: recordId, payload: { checkOut: new Date().toISOString() } }),
+      )
+      if (updateAttendance.fulfilled.match(result)) {
+        toast('Checked out')
+        await refresh()
+      } else {
+        toast('Could not log that check-out', 'error')
+      }
+    } finally {
+      setBusy(false)
     }
   }
+
+  const message = error ?? summaryError
 
   return (
     <AppLayout>
@@ -109,17 +159,11 @@ export default function AttendancePage() {
         <SectionHeader
           title="Attendance"
           description="Track and manage real-time employee attendance"
-          action={
-            <Button onClick={handleQuickCheckIn} className="gap-2 brand text-white border edge">
-              <Clock size={16} />
-              Quick Check-in
-            </Button>
-          }
         />
 
-        {error && (
-          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
-            {error}
+        {message && (
+          <div role="alert" className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+            {message}
           </div>
         )}
 
@@ -129,80 +173,64 @@ export default function AttendancePage() {
           ))}
         </div>
 
-        {/* Date filter */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium text-foreground/60">Filter by date</span>
+        <CheckInBar
+          employees={employees}
+          records={todayRecords}
+          busy={busy}
+          onCheckIn={handleCheckIn}
+          onCheckOut={handleCheckOut}
+        />
+
+        <div className="flex flex-wrap items-center gap-3">
+          <label htmlFor="attendance-date" className="text-sm font-medium text-foreground/60">
+            Filter by date
+          </label>
           <input
+            id="attendance-date"
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="h-10 w-44 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
+            onChange={(event) => {
+              setSelectedDate(event.target.value)
+              setPage(0)
+            }}
+            className="h-10 w-44 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:border-brand focus:outline-none focus:ring-2 ring-brand dark:edge dark:surface-70"
           />
           {selectedDate && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedDate('')}
+              onClick={() => {
+                setSelectedDate('')
+                setPage(0)
+              }}
               className="text-foreground/60 hover:text-foreground"
             >
               Clear filter
             </Button>
           )}
+          <p className="text-xs text-foreground/55">
+            Late after {lateAfter} per organization policy
+          </p>
         </div>
 
-        {/* Attendance records */}
-        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
-          {loading && records.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading attendance logs…
-            </div>
-          ) : filteredRecords.length > 0 ? (
-            <DataTable<AttendanceRecord>
-              columns={[
-                {
-                  header: 'Employee',
-                  accessor: 'employeeId',
-                  render: (emp) =>
-                    typeof emp === 'object' && emp !== null && 'name' in emp
-                      ? emp.name
-                      : 'Unknown Employee',
-                },
-                {
-                  header: 'Date',
-                  accessor: 'date',
-                  render: (date) => formatDate(date),
-                  className: 'text-foreground/65 text-sm',
-                },
-                {
-                  header: 'Check-in',
-                  accessor: 'checkIn',
-                  render: (checkIn) => formatTime(checkIn),
-                },
-                {
-                  header: 'Check-out',
-                  accessor: 'checkOut',
-                  render: (checkOut) => formatTime(checkOut),
-                },
-                {
-                  header: 'Status',
-                  accessor: 'checkIn',
-                  render: (checkIn) => (
-                    <Badge variant={checkIn ? 'success' : 'destructive'}>
-                      {checkIn ? 'Present' : 'Absent'}
-                    </Badge>
-                  ),
-                },
-              ]}
-              data={filteredRecords}
-            />
-          ) : (
-            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
-              <p>No attendance records found.</p>
-              <p className="mt-1 text-xs">Click &quot;Quick Check-in&quot; to log attendance.</p>
-            </div>
-          )}
-        </div>
+        <AttendanceTable
+          records={records}
+          loading={loading}
+          filtered={Boolean(selectedDate)}
+          lateAfter={lateAfter}
+          onClearFilter={() => {
+            setSelectedDate('')
+            setPage(0)
+          }}
+          pagination={{
+            page,
+            pageCount: pagination.totalPages,
+            total: pagination.total,
+            pageSize: PAGE_SIZE,
+            onPageChange: setPage,
+          }}
+        />
       </div>
     </AppLayout>
   )

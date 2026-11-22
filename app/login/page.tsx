@@ -64,7 +64,10 @@ export default function LoginPage() {
         <div className="bg-card rounded-2xl shadow-xl p-8 border border-border">
           <form onSubmit={handleSubmit} className="space-y-5">
             {displayError && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
+              <div
+                role="alert"
+                className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm"
+              >
                 {displayError}
               </div>
             )}
@@ -97,6 +100,14 @@ export default function LoginPage() {
                 required
                 className="w-full"
               />
+              <div className="mt-2 text-right">
+                <Link
+                  href="/forgot-password"
+                  className="brand-text text-sm font-medium hover:brightness-110"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <Button

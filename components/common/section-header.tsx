@@ -5,14 +5,18 @@ interface SectionHeaderProps {
   description?: string
   action?: React.ReactNode
   className?: string
+  /** Set on the heading so the wrapping <section> can use aria-labelledby. */
+  id?: string
 }
 
-export function SectionHeader({ title, description, action, className }: SectionHeaderProps) {
+export function SectionHeader({ title, description, action, className, id }: SectionHeaderProps) {
   return (
-    <div className={cn('flex items-start justify-between gap-4', className)}>
+    <div className={cn('flex flex-wrap items-start justify-between gap-4', className)}>
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
-        {description && <p className="mt-1 text-sm text-foreground/60">{description}</p>}
+        <h2 id={id} className="text-2xl font-bold tracking-tight text-foreground">
+          {title}
+        </h2>
+        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>

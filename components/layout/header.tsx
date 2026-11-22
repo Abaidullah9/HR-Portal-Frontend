@@ -1,134 +1,50 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Search, LogOut, Menu, CheckCheck, CheckCircle2, CalendarDays } from 'lucide-react'
+import { Search, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
-import { logoutUser } from '@/lib/redux/slices/authSlice'
-import { fetchLeaveRequests } from '@/lib/redux/slices/leaveSlice'
 import { PaletteSwitcher } from '@/components/layout/palette-switcher'
-import { useMenuNav } from '@/lib/hooks/use-menu-nav'
+import { NotificationsMenu } from '@/components/layout/notifications-menu'
+import { AccountMenu } from '@/components/layout/account-menu'
+import { ICON_BUTTON } from '@/components/layout/icon-button'
 
-const ICON_BUTTON =
-  'relative flex h-10 w-10 items-center justify-center rounded-xl border edge bg-white/50 text-foreground/70 press transition-all duration-200 hover:bg-white/80 hover:text-foreground hover:shadow-md hover:shadow-black/10 dark:surface-50 dark:text-foreground/60'
-
-interface NotificationItem {
-  id: string
-  title: string
-  detail: string
-  href: string
-  kind: 'leave' | 'joined'
-}
+type HeaderMenu = 'notifications' | 'account'
 
 export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
   const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { user } = useAppSelector((state) => state.auth)
-  const { requests: leaveRequests } = useAppSelector((state) => state.leaves)
-  const { employees } = useAppSelector((state) => state.employee)
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [readIds, setReadIds] = useState<string[]>([])
-  const menusRef = useRef<HTMLDivElement>(null)
-  const bellRef = useRef<HTMLButtonElement>(null)
-  const accountRef = useRef<HTMLButtonElement>(null)
-  const notificationsRef = useRef<HTMLDivElement>(null)
-  const userMenuRef = useRef<HTMLDivElement>(null)
+  // Only one header menu is ever open: this is state shared between two
+  // siblings, so it is lifted here rather than left to event ordering.
+  const [openMenu, setOpenMenu] = useState<HeaderMenu | null>(null)
+  const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  // Pending leave requests are the one queue that needs a human decision.
+  // The kbd hint advertises "/", so implement it: focus the search field from
+  // anywhere except while the user is already typing in a control.
   useEffect(() => {
-    dispatch(fetchLeaveRequests())
-  }, [dispatch])
-
-  const notifications: NotificationItem[] = useMemo(() => {
-    const pending = leaveRequests
-      .filter((request) => request.leaveStatus === 'pending')
-      .slice(0, 4)
-      .map<NotificationItem>((request) => ({
-        id: request._id,
-        title: `${
-          typeof request.employeeId === 'object' && request.employeeId !== null
-            ? request.employeeId.name
-            : 'An employee'
-        } requested ${request.leaveType} leave`,
-        detail: `${new Date(request.fromDate).toLocaleDateString()} → ${new Date(
-          request.toDate,
-        ).toLocaleDateString()}`,
-        href: '/leaves',
-        kind: 'leave',
-      }))
-
-    const joined = employees
-      .filter((employee) => employee.joiningDate)
-      .slice(-2)
-      .reverse()
-      .map<NotificationItem>((employee) => ({
-        id: `emp-${employee._id}`,
-        title: `${employee.name} joined as ${employee.position}`,
-        detail: employee.joiningDate
-          ? new Date(employee.joiningDate).toLocaleDateString()
-          : 'Recently added',
-        href: '/employees',
-        kind: 'joined',
-      }))
-
-    return [...pending, ...joined]
-  }, [leaveRequests, employees])
-
-  const unread = notifications.filter((item) => !readIds.includes(item.id))
-
-  const closeMenus = () => {
-    setShowUserMenu(false)
-    setShowNotifications(false)
-  }
-
-  // Menus behave like real menus: outside click or Escape dismisses them, and
-  // Escape hands focus back to the button that opened the panel.
-  useEffect(() => {
-    if (!showUserMenu && !showNotifications) return
-
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      closeMenus()
-      if (showNotifications) bellRef.current?.focus()
-      else if (showUserMenu) accountRef.current?.focus()
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return
+      const target = event.target as HTMLElement | null
+      if (
+        target?.isContentEditable ||
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.tagName === 'SELECT'
+      ) {
+        return
+      }
+      event.preventDefault()
+      searchRef.current?.focus()
     }
-    const onPointerDown = (event: MouseEvent) => {
-      if (!menusRef.current?.contains(event.target as Node)) closeMenus()
-    }
-
     document.addEventListener('keydown', onKeyDown)
-    document.addEventListener('mousedown', onPointerDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('mousedown', onPointerDown)
-    }
-  }, [showUserMenu, showNotifications])
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
 
-  // Roving focus + arrow keys inside each open panel.
-  useMenuNav({
-    open: showNotifications,
-    containerRef: notificationsRef,
-    triggerRef: bellRef,
-    onClose: closeMenus,
-  })
-  useMenuNav({
-    open: showUserMenu,
-    containerRef: userMenuRef,
-    triggerRef: accountRef,
-    onClose: closeMenus,
-  })
-
-  const handleLogout = async () => {
-    closeMenus()
-    await dispatch(logoutUser())
-    router.push('/login')
-  }
-
-  const markAllRead = () => {
-    setReadIds(notifications.map((item) => item.id))
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault()
+    const trimmed = query.trim()
+    if (!trimmed) return
+    router.push(`/employees?q=${encodeURIComponent(trimmed)}`)
   }
 
   return (
@@ -145,169 +61,51 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
           </button>
         )}
 
-        <div className="relative flex w-full max-w-md flex-1 items-center rounded-xl border edge bg-white/50 px-3 backdrop-blur-md shadow-sm shadow-black/5 transition-shadow focus-within:border-brand focus-within:ring-2 focus-within:ring-brand dark:surface-40">
+        {/* w-0 + flex-1, not w-full: a percentage width still adds the field's
+            intrinsic width (~322px) to the header's min-content, which forced
+            the page to 606px at 320px. */}
+        <form
+          role="search"
+          onSubmit={handleSearch}
+          className="relative flex w-0 min-w-0 max-w-md flex-1 items-center rounded-xl border edge bg-white/50 px-3 backdrop-blur-md shadow-sm shadow-black/5 transition-shadow focus-within:border-brand focus-within:ring-2 focus-within:ring-brand max-[399px]:hidden dark:surface-40"
+        >
           <Search
             size={18}
             className="shrink-0 text-foreground/65 transition-colors hover:text-foreground/80"
           />
+          {/* A placeholder is not a label, so the field carries its own
+              accessible name. size={1} caps the input's intrinsic width — the
+              default size=20 floors the field at ~278px, which min-w-0 cannot
+              override. */}
           <input
+            ref={searchRef}
             type="search"
-            placeholder="Search employees, documents, reports..."
-            className="w-full bg-transparent py-2.5 text-sm text-foreground placeholder:text-foreground/60 focus:outline-none md:pl-3"
+            size={1}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search employees"
+            placeholder="Search employees by name, email, department..."
+            className="w-full min-w-0 bg-transparent py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none pointer-coarse:min-h-11 md:pl-3"
           />
-          <kbd className="hidden rounded-lg border edge bg-foreground/5 px-2 py-0.5 text-[10px] font-medium text-foreground/65 backdrop-blur-sm select-none md:inline-flex">
+          <kbd
+            aria-hidden="true"
+            className="hidden rounded-lg border edge bg-foreground/5 px-2 py-0.5 text-xs font-medium text-muted-foreground backdrop-blur-sm select-none md:inline-flex"
+          >
             /
           </kbd>
-        </div>
+        </form>
       </div>
 
-      <div className="flex items-center gap-2" ref={menusRef}>
-        {/* Notifications */}
-        <div className="relative">
-          <button
-            type="button"
-            ref={bellRef}
-            onClick={() => {
-              setShowNotifications((prev) => !prev)
-              setShowUserMenu(false)
-            }}
-            className={cn(ICON_BUTTON, showNotifications && 'bg-white/80 dark:surface-95')}
-            aria-label={
-              unread.length > 0 ? `Notifications, ${unread.length} unread` : 'Notifications'
-            }
-            aria-expanded={showNotifications}
-            aria-haspopup="menu"
-          >
-            <Bell size={18} />
-            {unread.length > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--danger-rgb))] px-1 text-[10px] font-semibold text-white shadow-sm">
-                {unread.length}
-              </span>
-            )}
-          </button>
-
-          {showNotifications && (
-            <div
-              ref={notificationsRef}
-              className="absolute right-0 top-12 z-50 w-80 rounded-2xl border edge bg-white/90 p-2 backdrop-blur-xl shadow-2xl shadow-black/10 dark:surface-95 dark:shadow-black/50"
-              role="menu"
-              aria-label="Notifications"
-            >
-              <div className="flex items-center justify-between border-b edge px-3 py-2.5">
-                <p className="text-sm font-semibold text-foreground">Notifications</p>
-                {unread.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={markAllRead}
-                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium brand-text press transition-colors hover:bg-foreground/5"
-                    role="menuitem"
-                  >
-                    <CheckCheck size={13} />
-                    Mark all read
-                  </button>
-                )}
-              </div>
-
-              <div className="max-h-80 overflow-y-auto py-1">
-                {notifications.length === 0 ? (
-                  <p role="status" className="px-3 py-6 text-center text-sm text-foreground/60">
-                    You&apos;re all caught up.
-                  </p>
-                ) : (
-                  notifications.map((item) => {
-                    const isUnread = !readIds.includes(item.id)
-                    const Icon = item.kind === 'leave' ? CalendarDays : CheckCircle2
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        role="menuitem"
-                        onClick={() => {
-                          setReadIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]))
-                          closeMenus()
-                        }}
-                        className="flex items-start gap-3 rounded-xl px-3 py-2.5 press-sm transition-colors hover:bg-foreground/5"
-                      >
-                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg brand-tint brand-text border">
-                          <Icon size={15} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-foreground">
-                            {item.title}
-                          </span>
-                          <span className="block text-xs text-foreground/65">{item.detail}</span>
-                        </span>
-                        {isUnread && (
-                          <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--brand-rgb))]" />
-                        )}
-                      </Link>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Colour palette picker (light + dark themes live here) */}
+      <div className="flex shrink-0 items-center gap-2">
+        <NotificationsMenu
+          open={openMenu === 'notifications'}
+          onOpenChange={(open) => setOpenMenu(open ? 'notifications' : null)}
+        />
         <PaletteSwitcher />
-
-        {/* User menu */}
-        <div className="relative">
-          <button
-            type="button"
-            ref={accountRef}
-            onClick={() => {
-              setShowUserMenu((prev) => !prev)
-              setShowNotifications(false)
-            }}
-            className={cn(ICON_BUTTON, 'text-foreground', showUserMenu && 'bg-white/80 dark:surface-95')}
-            aria-expanded={showUserMenu}
-            aria-haspopup="menu"
-            aria-label="Account menu"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full avatar-brand text-xs font-semibold text-white shadow-md shadow-black/20">
-              {user?.name?.[0]?.toUpperCase() || 'U'}
-            </div>
-          </button>
-
-          {showUserMenu && (
-            <div
-              ref={userMenuRef}
-              className="absolute right-0 top-12 z-50 w-64 rounded-2xl border edge bg-white/90 p-2 backdrop-blur-xl shadow-2xl shadow-black/10 dark:surface-95 dark:shadow-black/50"
-              role="menu"
-              aria-label="Account"
-            >
-              <div className="rounded-xl border-b edge px-3 py-2.5">
-                <p className="text-sm font-semibold text-foreground">{user?.name}</p>
-                <p className="text-xs text-foreground/65">{user?.email}</p>
-                <p className="mt-1 text-xs text-foreground/60 capitalize">
-                  {typeof user?.roleId === 'object' && user?.roleId
-                    ? user.roleId.roleName
-                    : user?.role || 'Staff'}
-                </p>
-              </div>
-              <Link
-                href="/settings"
-                onClick={closeMenus}
-                role="menuitem"
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-foreground/70 press-sm transition-colors hover:bg-foreground/5 hover:text-foreground"
-              >
-                <Menu size={15} />
-                Settings &amp; preferences
-              </Link>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-xl border border-transparent px-3 py-2.5 text-sm text-foreground/70 press-sm transition-colors hover:danger-panel hover:danger-text dark:hover:danger-text"
-                role="menuitem"
-              >
-                <LogOut size={15} />
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
+        <AccountMenu
+          open={openMenu === 'account'}
+          onOpenChange={(open) => setOpenMenu(open ? 'account' : null)}
+        />
       </div>
     </header>
   )

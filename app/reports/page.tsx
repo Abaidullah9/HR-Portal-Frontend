@@ -1,77 +1,27 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Download, FileBarChart, Plus } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
-import { DataTable } from '@/components/common/data-table'
+import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
+import { EmptyState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Download, Plus } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
-import { fetchReports, generateReport } from '@/lib/redux/slices/reportSlice'
+import { fetchReports } from '@/lib/redux/slices/reportSlice'
+import { formatDate } from '@/lib/utils'
 import { Report } from '@/types/report'
-import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
+import { GenerateReportDialog } from './generate-report-dialog'
+import { AnalyticsPanel } from './analytics-panel'
 
 export default function ReportsPage() {
   const dispatch = useAppDispatch()
   const { reports, loading, error } = useAppSelector((state) => state.reports)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [reportName, setReportName] = useState('')
-  const [category, setCategory] = useState('attendance')
-  const [generating, setGenerating] = useState(false)
-  const [modalError, setModalError] = useState('')
 
   useEffect(() => {
     dispatch(fetchReports())
   }, [dispatch])
-
-  // Dialog keyboard behaviour: focus trap, Escape, scroll lock, focus restore.
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useDialogA11y({
-    open: isModalOpen,
-    containerRef: dialogRef,
-    onClose: () => setIsModalOpen(false),
-  })
-
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!reportName.trim()) return
-
-    setGenerating(true)
-    setModalError('')
-
-    try {
-      const result = await dispatch(
-        generateReport({
-          reportName,
-          category,
-        }),
-      )
-
-      if (generateReport.fulfilled.match(result)) {
-        setIsModalOpen(false)
-        setReportName('')
-      } else {
-        setModalError(result.payload || 'Failed to generate report')
-      }
-    } catch {
-      setModalError('An error occurred while generating the report')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString([], {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    } catch {
-      return dateStr
-    }
-  }
 
   return (
     <AppLayout>
@@ -91,18 +41,37 @@ export default function ReportsPage() {
         />
 
         {error && (
-          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+          <div role="alert" className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
             {error}
           </div>
         )}
 
-        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
+        <AnalyticsPanel />
+
+        <div className="panel overflow-hidden">
           {loading && reports.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading reports…
+            <div role="status" aria-busy="true">
+              <span className="sr-only">Loading reports</span>
+              <DataTableSkeleton rows={5} columns={5} />
             </div>
-          ) : reports.length > 0 ? (
+          ) : reports.length === 0 ? (
+            <EmptyState
+              icon={FileBarChart}
+              title="No reports yet"
+              description="Reports you generate are kept here with their download links. Generate your first one to start the audit trail."
+              action={
+                <Button
+                  onClick={() => setIsModalOpen(true)}
+                  className="gap-2 brand text-white border edge"
+                >
+                  <Plus size={18} />
+                  Generate report
+                </Button>
+              }
+            />
+          ) : (
             <DataTable<Report>
+              caption="Generated reports"
               columns={[
                 {
                   header: 'Report Name',
@@ -136,12 +105,16 @@ export default function ReportsPage() {
                         href={row.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/65 transition-colors hover:bg-white/40 hover:text-foreground dark:hover:bg-white/5"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground/65 pointer-coarse:min-h-11 pointer-coarse:min-w-11 transition-colors hover:bg-white/40 hover:text-foreground dark:hover:bg-white/5"
+                        aria-label={`Download ${row.reportName}`}
                       >
                         <Download size={16} />
                       </a>
                     ) : (
-                      <span className="inline-flex h-8 w-8 items-center justify-center text-foreground/65">
+                      <span
+                        className="inline-flex h-8 w-8 items-center justify-center text-foreground/65"
+                        aria-hidden="true"
+                      >
                         <Download size={16} />
                       </span>
                     ),
@@ -150,105 +123,11 @@ export default function ReportsPage() {
               ]}
               data={reports}
             />
-          ) : (
-            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
-              <p>No reports generated yet.</p>
-              <p className="mt-1 text-xs">Click &quot;Generate Report&quot; to create one.</p>
-            </div>
           )}
         </div>
       </div>
 
-      {/* Generate report modal */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}
-        >
-          <div
-            ref={dialogRef}
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="generate-report-title"
-            className="w-full max-w-md rounded-2xl border edge bg-white/95 p-6 shadow-2xl shadow-black/10 backdrop-blur-xl dark:edge dark:surface-95"
-          >
-            <div className="mb-6 border-b edge pb-6 flex items-center justify-between">
-              <h2 id="generate-report-title" className="text-xl font-bold text-foreground">
-                Generate New Report
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground/60 press transition-colors hover:bg-white/50 hover:text-foreground dark:hover:bg-white/5"
-                aria-label="Close dialog"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="mb-4 rounded-xl border danger-panel p-3 text-sm backdrop-blur-sm">
-                {modalError}
-              </div>
-            )}
-
-            <form onSubmit={handleGenerate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Report Name
-                </label>
-                <Input
-                  type="text"
-                  placeholder="e.g. Q4 Attendance Summary"
-                  value={reportName}
-                  onChange={(e) => setReportName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
-                >
-                  <option value="attendance">Attendance</option>
-                  <option value="payroll">Payroll</option>
-                  <option value="performance">Performance</option>
-                  <option value="recruitment">Recruitment</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-5 border-t edge">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={generating}
-                  className="flex-1 brand text-white border edge"
-                >
-                  {generating ? 'Generating…' : 'Generate'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {isModalOpen && <GenerateReportDialog onClose={() => setIsModalOpen(false)} />}
     </AppLayout>
   )
 }

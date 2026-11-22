@@ -7,6 +7,7 @@ import { EmployeeView } from '@/components/performance/employee-view'
 import { ManagerView } from '@/components/performance/manager-view'
 import { HRView } from '@/components/performance/hr-view'
 import { useAppDispatch } from '@/lib/redux/store'
+import { usePermissions } from '@/lib/hooks/use-permissions'
 import {
   fetchPerformanceCycles,
   fetchAppraisals,
@@ -17,13 +18,19 @@ type UserRole = 'employee' | 'manager' | 'hr'
 
 export default function PerformancePage() {
   const dispatch = useAppDispatch()
+  const { canView } = usePermissions()
   const [selectedRole, setSelectedRole] = useState<UserRole>('employee')
 
+  // The employee view reads its own reviews from the self-service endpoint, so
+  // an Employee must not request the org-wide lists they have no grant for.
+  const canReadAppraisals = canView('performance')
+
   useEffect(() => {
+    dispatch(fetchFeedback())
+    if (!canReadAppraisals) return
     dispatch(fetchPerformanceCycles())
     dispatch(fetchAppraisals())
-    dispatch(fetchFeedback())
-  }, [dispatch])
+  }, [dispatch, canReadAppraisals])
 
   const renderView = () => {
     switch (selectedRole) {

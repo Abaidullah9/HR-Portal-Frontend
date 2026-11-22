@@ -7,6 +7,8 @@ export interface OrganizationSetting {
   phone?: string;
   address?: string;
   workingDays: number[];
+  /** Local time after which a check-in counts as late, e.g. "09:15". */
+  lateAfter?: string;
   logoUrl?: string;
 }
 

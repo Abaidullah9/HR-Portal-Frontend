@@ -1,220 +1,167 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
-import { Badge } from '@/components/common/badge'
-import { DataTable } from '@/components/common/data-table'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Search, Plus, Trash2, X } from 'lucide-react'
 import { AddEmployeeModal } from '@/components/employees/add-employee-modal'
+import { AddDepartmentDialog } from '@/components/employees/add-department-dialog'
+import { ImportEmployeesDialog } from '@/components/employees/import-employees-dialog'
+import { InviteUserDialog } from '@/components/employees/invite-user-dialog'
+import { DirectoryToolbar } from '@/components/employees/directory-toolbar'
+import { useToast } from '@/components/common/toast'
+import { usePermissions } from '@/lib/hooks/use-permissions'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
-import { fetchEmployees, fetchDepartments, deleteEmployee } from '@/lib/redux/slices/employeeSlice'
-import { Employee } from '@/types/employee'
+import {
+  fetchEmployees,
+  fetchDepartments,
+  deleteEmployee,
+} from '@/lib/redux/slices/employeeSlice'
+import { PAGE_SIZE } from '@/lib/api/page'
+import { EmployeeTable } from './employee-table'
 
-export default function EmployeesPage() {
+function EmployeeDirectory() {
   const dispatch = useAppDispatch()
-  const { employees, loading, error } = useAppSelector((state) => state.employee)
+  const toast = useToast()
+  const { can } = usePermissions()
+  const canManage = can('manageEmployees')
+  const searchParams = useSearchParams()
+  const { employees, loading, error, pagination } = useAppSelector((state) => state.employee)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
-    dispatch(fetchEmployees())
     dispatch(fetchDepartments())
   }, [dispatch])
 
-  const filteredEmployees = employees.filter((emp: Employee) => {
-    const deptName =
-      typeof emp.departmentId === 'object' && emp.departmentId !== null
-        ? emp.departmentId.name
-        : emp.departmentId || ''
-    return (
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      deptName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.position.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })
+  // The search runs on the server, because a filter applied to one page would
+  // only ever find matches that happened to be on that page.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void dispatch(
+        fetchEmployees({
+          page: page + 1,
+          limit: PAGE_SIZE,
+          search: searchTerm.trim() || undefined,
+        }),
+      )
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [dispatch, page, searchTerm])
+
+  // The header search links here as /employees?q=…, including while this page is
+  // already mounted, so the field follows the query string.
+  useEffect(() => {
+    const query = searchParams.get('q')
+    if (query) {
+      setSearchTerm(query)
+      setPage(0)
+    }
+  }, [searchParams])
+
+  const refresh = useCallback(
+    () =>
+      dispatch(
+        fetchEmployees({ page: page + 1, limit: PAGE_SIZE, search: searchTerm.trim() || undefined }),
+      ),
+    [dispatch, page, searchTerm],
+  )
 
   const handleDelete = async (id: string) => {
-    await dispatch(deleteEmployee(id))
-    setShowDeleteConfirm(null)
-  }
-
-  const statusVariant = (isActive: boolean) => (isActive ? 'success' : 'destructive')
-
-  if (error) {
-    return (
-      <AppLayout>
-        <div className="mx-auto max-w-7xl space-y-6">
-          <SectionHeader
-            title="Employee Directory"
-            description="Manage and view all employees in your organization"
-          />
-          <div className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
-            {error}
-          </div>
-        </div>
-      </AppLayout>
-    )
+    setDeletingId(id)
+    try {
+      const result = await dispatch(deleteEmployee(id))
+      if (deleteEmployee.fulfilled.match(result)) {
+        toast('Employee removed')
+        // The row just left this page, so refetch it rather than leave a hole.
+        await dispatch(
+          fetchEmployees({ page: page + 1, limit: PAGE_SIZE, search: searchTerm.trim() || undefined }),
+        )
+      } else {
+        toast('Could not remove that employee', 'error')
+      }
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
     <AppLayout>
       <div className="space-y-10">
-        {/* Header */}
         <SectionHeader
           title="Employee Directory"
           description="Manage and view all employees in your organization"
-          action={
-            <Button
-              onClick={() => setIsModalOpen(true)}
-              className="gap-2 brand text-white border edge"
-            >
-              <Plus size={18} />
-              Add Employee
-            </Button>
-          }
         />
 
-        {/* Search */}
-        <div className="flex max-w-xl">
-          <div className="relative flex-1">
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/60 transition-colors hover:text-foreground/70"
-            />
-            <Input
-              placeholder="Search by name, email, or department..."
-              className="pl-11"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <DirectoryToolbar
+          canManage={canManage}
+          searchTerm={searchTerm}
+          onSearchChange={(value) => {
+            setSearchTerm(value)
+            setPage(0)
+          }}
+          onClearSearch={() => {
+            setSearchTerm('')
+            setPage(0)
+          }}
+          onInvite={() => setIsInviteOpen(true)}
+          onImport={() => setIsImportOpen(true)}
+          onAddDepartment={() => setIsDeptModalOpen(true)}
+          onAddEmployee={() => setIsModalOpen(true)}
+        />
+
+        {error && (
+          <div role="alert" className="rounded-2xl border danger-panel p-6 text-sm backdrop-blur-md">
+            {error}
           </div>
-        </div>
-
-        {/* Table panel */}
-        <div className="overflow-hidden rounded-2xl border edge bg-white/70 shadow-xl shadow-black/5 backdrop-blur-md dark:edge dark:surface-85">
-          {loading && employees.length === 0 ? (
-            <div className="flex h-48 items-center justify-center text-sm text-foreground/65">
-              Loading employees…
-            </div>
-          ) : filteredEmployees.length > 0 ? (
-            <>
-              <DataTable<Employee>
-                columns={[
-                  {
-                    header: 'Code',
-                    accessor: 'employeeCode',
-                    className: 'font-mono text-xs text-foreground/60',
-                  },
-                  {
-                    header: 'Name',
-                    accessor: 'name',
-                    className: 'font-semibold',
-                  },
-                  {
-                    header: 'Email',
-                    accessor: 'email',
-                    className: 'text-foreground/60 text-sm',
-                  },
-                  {
-                    header: 'Department',
-                    accessor: 'departmentId',
-                    render: (dept) =>
-                      typeof dept === 'object' && dept !== null ? dept.name : dept || 'General',
-                  },
-                  {
-                    header: 'Position',
-                    accessor: 'position',
-                  },
-                  {
-                    header: 'Status',
-                    accessor: 'isActive',
-                    render: (isActive) => (
-                      <Badge variant={statusVariant(Boolean(isActive))}>
-                        {isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    ),
-                  },
-                  {
-                    header: '',
-                    accessor: '_id',
-                    render: (id) => (
-                      <div className="flex justify-end">
-                        <div className="relative">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="h-8 w-8 text-foreground/60 hover:danger-text hover:danger-panel dark:text-foreground/65 dark:hover:danger-text"
-                            onClick={() => setShowDeleteConfirm(id as string)}
-                          >
-                            <Trash2 size={15} />
-                          </Button>
-                          {showDeleteConfirm === id && (
-                            <div className="absolute right-0 top-9 z-50 w-56 rounded-2xl border edge bg-white/95 p-4 backdrop-blur-xl shadow-2xl shadow-black/10 dark:edge dark:surface-95">
-                              <p className="font-semibold text-foreground">Confirm deletion?</p>
-                              <p className="mt-1 text-sm text-foreground/60">
-                                This employee will be permanently removed.
-                              </p>
-                              <div className="mt-4 flex gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setShowDeleteConfirm(null)}
-                                  className="flex-1"
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDelete(id as string)}
-                                  className="flex-1"
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ),
-                    className: 'text-right',
-                  },
-                ]}
-                data={filteredEmployees}
-              />
-            </>
-          ) : (
-            <div className="flex h-64 flex-col items-center justify-center text-sm text-foreground/65">
-              <p className="mb-4">No employees found.</p>
-              <Button
-                onClick={() => setIsModalOpen(true)}
-                className="gap-2 brand text-white border edge"
-              >
-                <Plus size={18} />
-                Add First Employee
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {filteredEmployees.length > 0 && (
-          <p className="flex items-center justify-between text-sm text-foreground/65">
-            <span>
-              Showing {filteredEmployees.length} of {employees.length} employees
-            </span>
-          </p>
         )}
+
+        <EmployeeTable
+          employees={employees}
+          loading={loading}
+          searchTerm={searchTerm}
+          deletingId={deletingId}
+          canManage={canManage}
+          onDelete={handleDelete}
+          onAdd={() => setIsModalOpen(true)}
+          pagination={{
+            page,
+            pageCount: pagination.totalPages,
+            total: pagination.total,
+            pageSize: PAGE_SIZE,
+            onPageChange: setPage,
+          }}
+        />
       </div>
 
       <AddEmployeeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {isDeptModalOpen && <AddDepartmentDialog onClose={() => setIsDeptModalOpen(false)} />}
+      <ImportEmployeesDialog
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImported={(result) => {
+          if (result.created.length > 0) {
+            toast(`Imported ${result.created.length} employee${result.created.length === 1 ? '' : 's'}`)
+            setPage(0)
+            void refresh()
+          }
+        }}
+      />
+      <InviteUserDialog isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
     </AppLayout>
+  )
+}
+
+// useSearchParams needs a Suspense boundary on a statically rendered route.
+export default function EmployeesPage() {
+  return (
+    <Suspense fallback={null}>
+      <EmployeeDirectory />
+    </Suspense>
   )
 }

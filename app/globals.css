@@ -301,6 +301,12 @@
   background-color: rgb(var(--solid-rgb));
 }
 
+/* The standard translucent panel: every dashboard card, the activity table
+   shell and the empty/error boxes use this one recipe. */
+@utility panel {
+  @apply rounded-2xl border edge surface-70 shadow-sm shadow-black/5 backdrop-blur-md;
+}
+
 /* Hairline panel borders that stay subtle in both light and dark palettes. */
 @utility edge {
   border-color: rgb(var(--edge-rgb) / var(--edge-alpha));
@@ -381,6 +387,44 @@
 @utility ring-brand {
   --tw-ring-color: rgb(var(--brand-rgb) / 0.4);
 }
+/* Solid danger chip. The raw palette red only reaches 3.67:1 against white, so
+   the fill is darkened until white text clears the 4.5:1 AA floor. */
+@utility danger-solid {
+  background-color: color-mix(in srgb, rgb(var(--danger-rgb)) 72%, black);
+  color: #fff;
+}
+/* Palette glow painted behind the navigation rail (none in flat palettes). */
+@utility sidebar-glow {
+  background-image: var(--sidebar-glow);
+}
+
+/* Preview swatches for the appearance picker: each set exposes one palette's
+   bg / surface / brand / accent colours as --swatch-1..4, so the component can
+   stay class-based instead of shipping inline style objects. */
+@utility swatch-set-midnight {
+  --swatch-1: #080d1a;
+  --swatch-2: #111827;
+  --swatch-3: #2563eb;
+  --swatch-4: #60a5fa;
+}
+@utility swatch-set-indigo {
+  --swatch-1: #0c0d18;
+  --swatch-2: #1e2034;
+  --swatch-3: #2563eb;
+  --swatch-4: #7c3aed;
+}
+@utility swatch-set-slate {
+  --swatch-1: #ffffff;
+  --swatch-2: #f1f5f9;
+  --swatch-3: #2563eb;
+  --swatch-4: #0f172a;
+}
+@utility swatch-set-emerald {
+  --swatch-1: #0a0f0d;
+  --swatch-2: #121a17;
+  --swatch-3: #10b981;
+  --swatch-4: #14b8a6;
+}
 @utility border-brand {
   border-color: rgb(var(--brand-rgb) / 0.5);
 }
@@ -454,5 +498,18 @@
   }
   h6 {
     @apply text-base font-semibold;
+  }
+
+  /* Respect the OS "reduce motion" setting: no decorative transitions,
+     transforms or scroll animation anywhere in the app. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
