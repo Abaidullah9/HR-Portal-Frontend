@@ -24,7 +24,8 @@ import { RejectLeaveDialog } from './reject-leave-dialog'
 export default function LeavesPage() {
   const dispatch = useAppDispatch()
   const toast = useToast()
-  const { can } = usePermissions()
+  const { can, canView } = usePermissions()
+  const canPickEmployees = canView('employees')
   const { requests, balances, loading, error, pagination } = useAppSelector(
     (state) => state.leaves,
   )
@@ -40,8 +41,10 @@ export default function LeavesPage() {
 
   useEffect(() => {
     void dispatch(fetchLeaveBalances())
-    void dispatch(fetchEmployees({ limit: PICKER_LIMIT }))
-  }, [dispatch])
+    // Roles without read_Employee cannot list the directory; the request would
+    // only return 403. Their dialog falls back to their own employee record.
+    if (canPickEmployees) void dispatch(fetchEmployees({ limit: PICKER_LIMIT }))
+  }, [dispatch, canPickEmployees])
 
   const decide = async (
     request: LeaveRequest,

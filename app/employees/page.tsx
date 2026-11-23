@@ -9,8 +9,10 @@ import { AddDepartmentDialog } from '@/components/employees/add-department-dialo
 import { ImportEmployeesDialog } from '@/components/employees/import-employees-dialog'
 import { InviteUserDialog } from '@/components/employees/invite-user-dialog'
 import { DirectoryToolbar } from '@/components/employees/directory-toolbar'
+import { AccessDenied } from '@/components/common/access-denied'
 import { useToast } from '@/components/common/toast'
 import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import {
   fetchEmployees,
@@ -23,8 +25,11 @@ import { EmployeeTable } from './employee-table'
 function EmployeeDirectory() {
   const dispatch = useAppDispatch()
   const toast = useToast()
-  const { can } = usePermissions()
+  const { can, canView } = usePermissions()
   const canManage = can('manageEmployees')
+  const { user } = useAppSelector((state) => state.auth)
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('employees')
   const searchParams = useSearchParams()
   const { employees, loading, error, pagination } = useAppSelector((state) => state.employee)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -36,12 +41,14 @@ function EmployeeDirectory() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!canRead) return
     dispatch(fetchDepartments())
-  }, [dispatch])
+  }, [dispatch, canRead])
 
   // The search runs on the server, because a filter applied to one page would
   // only ever find matches that happened to be on that page.
   useEffect(() => {
+    if (!canRead) return
     const timer = window.setTimeout(() => {
       void dispatch(
         fetchEmployees({
@@ -52,7 +59,7 @@ function EmployeeDirectory() {
       )
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [dispatch, page, searchTerm])
+  }, [dispatch, page, searchTerm, canRead])
 
   // The header search links here as /employees?q=…, including while this page is
   // already mounted, so the field follows the query string.
@@ -88,6 +95,20 @@ function EmployeeDirectory() {
     } finally {
       setDeletingId(null)
     }
+  }
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-10">
+          <SectionHeader
+            title="Employee Directory"
+            description="Manage and view all employees in your organization"
+          />
+          <AccessDenied area="the employee directory" />
+        </div>
+      </AppLayout>
+    )
   }
 
   return (

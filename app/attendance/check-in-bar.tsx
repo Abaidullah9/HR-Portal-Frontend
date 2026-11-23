@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import { CheckCircle, LogIn, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { dayKey, formatTime, recordEmployeeId, todayKey } from '@/lib/attendance'
 import type { AttendanceRecord } from '@/types/attendance'
 import type { Employee } from '@/types/employee'
@@ -54,22 +61,30 @@ export function CheckInBar({
           >
             Employee
           </label>
-          <select
-            id="attendance-employee"
-            value={employeeId}
-            onChange={(event) => setEmployeeId(event.target.value)}
+          <Select
+            items={employees.map((employee) => ({
+              value: employee._id,
+              label: `${employee.name} (${employee.employeeCode})`,
+            }))}
+            value={employeeId || null}
+            onValueChange={(value) => setEmployeeId(value ?? '')}
             disabled={employees.length === 0}
-            className="h-10 w-full rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:border-brand focus:outline-none focus:ring-2 ring-brand dark:edge dark:surface-70"
           >
-            <option value="">
-              {employees.length === 0 ? 'No employees available' : 'Select an employee'}
-            </option>
-            {employees.map((employee) => (
-              <option key={employee._id} value={employee._id}>
-                {employee.name} ({employee.employeeCode})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="attendance-employee" className="h-10 w-full">
+              <SelectValue
+                placeholder={
+                  employees.length === 0 ? 'No employees available' : 'Select an employee'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((employee) => (
+                <SelectItem key={employee._id} value={employee._id}>
+                  {employee.name} ({employee.employeeCode})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {stage === 'not-checked-in' && (

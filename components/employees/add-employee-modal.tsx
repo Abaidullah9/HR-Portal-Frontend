@@ -46,13 +46,23 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const clearFieldError = (name: EmployeeField) => {
+    // A corrected field should stop shouting immediately.
+    setErrors((prev) => (prev[name] ? { ...prev, [name]: undefined } : prev))
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
-    // A corrected field should stop shouting immediately.
-    setErrors((prev) =>
-      prev[name as EmployeeField] ? { ...prev, [name]: undefined } : prev,
-    )
+    clearFieldError(name as EmployeeField)
+  }
+
+  const handleSelectChange = (
+    name: 'departmentId' | 'position' | 'employmentType',
+    value: string,
+  ) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (name === 'departmentId') clearFieldError(name)
   }
 
   const validate = (): Partial<Record<EmployeeField, string>> => {
@@ -168,6 +178,7 @@ export function AddEmployeeModal({ isOpen, onClose }: AddEmployeeModalProps) {
           <EmployeeFormFields
             formData={formData}
             onChange={handleChange}
+            onSelectChange={handleSelectChange}
             departments={departments}
             errors={errors}
           />

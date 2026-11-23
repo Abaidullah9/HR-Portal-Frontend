@@ -42,9 +42,6 @@ export const EMPLOYEE_FIELD_IDS: Record<EmployeeField, string> = {
   joiningDate: 'employee-joining-date',
 }
 
-export const selectClass =
-  'w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md aria-invalid:border-[rgb(var(--danger-rgb))] focus:outline-none focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70'
-
 export const labelClass = 'block text-sm font-medium text-foreground mb-2'
 
 /** Message tied to its control through aria-describedby, so it is announced. */

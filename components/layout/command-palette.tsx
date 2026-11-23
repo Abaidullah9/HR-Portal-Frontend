@@ -100,7 +100,7 @@ export function CommandPalette() {
             onKeyDown={handleKeyDown}
             className="w-full bg-transparent text-sm text-foreground placeholder:text-foreground/50 focus:outline-none"
           />
-          <kbd className="rounded border edge px-1.5 py-0.5 text-[10px] font-medium text-foreground/60">
+          <kbd className="rounded border edge px-1.5 py-0.5 text-xs font-medium text-foreground/60">
             Esc
           </kbd>
         </div>

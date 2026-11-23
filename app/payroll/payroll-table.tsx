@@ -78,6 +78,7 @@ export function PayrollTable({
   columns.push({
     header: 'Actions',
     accessor: '_id',
+    sortable: false,
     className: 'text-right',
     render: (id, row) => (
       <div className="flex items-center justify-end gap-2">

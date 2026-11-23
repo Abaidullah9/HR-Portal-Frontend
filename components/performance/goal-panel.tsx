@@ -2,6 +2,7 @@ import { Target } from 'lucide-react'
 import { Badge } from '@/components/common/badge'
 import { DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
+import { ProgressBar } from '@/components/common/progress-bar'
 
 interface Goal {
   goalName: string
@@ -62,18 +63,12 @@ export function GoalPanel({ goals, goalsCompleted, loading }: GoalPanelProps) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground">{goal.goalName}</p>
                 <div className="mt-3 flex items-center gap-4">
-                  <div className="flex-1 max-w-[220px]">
-                    <div className="h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 group-hover:scale-x-105 ${
-                          goal.completionStatus === 'completed'
-                            ? 'bg-[rgb(var(--success-rgb))]'
-                            : 'brand'
-                        }`}
-                        style={{ width: `${goal.goalCompletionRate}%` }}
-                      />
-                    </div>
-                  </div>
+                  <ProgressBar
+                    className="max-w-56 flex-1"
+                    value={goal.goalCompletionRate}
+                    label={`${goal.goalName} completion`}
+                    tone={goal.completionStatus === 'completed' ? 'success' : 'brand'}
+                  />
                   <span className="text-sm font-medium text-foreground">
                     {goal.goalCompletionRate}%
                   </span>

@@ -2,6 +2,7 @@ import { Layers, Zap } from 'lucide-react'
 import { Badge } from '@/components/common/badge'
 import { DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
+import { ProgressBar } from '@/components/common/progress-bar'
 
 export interface CycleRow {
   _id: string
@@ -78,7 +79,7 @@ export function CycleList({ rows, loading }: CycleListProps) {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4 sm:grid-cols-4">
                   <div>
                     <p className="text-xs text-foreground/65">Appraisals</p>
                     <p className="mt-1 text-2xl font-bold text-foreground">{cycle.total}</p>
@@ -101,12 +102,10 @@ export function CycleList({ rows, loading }: CycleListProps) {
                   </div>
                 </div>
 
-                <div className="h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
-                  <div
-                    className="h-full rounded-full brand transition-all duration-300"
-                    style={{ width: `${completionRate}%` }}
-                  />
-                </div>
+                <ProgressBar
+                  value={completionRate}
+                  label={`${cycle.name} completion`}
+                />
               </div>
             )
           })}

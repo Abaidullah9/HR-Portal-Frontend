@@ -45,6 +45,9 @@ async function request<T, B = unknown>(
     method: options.method || 'GET',
     headers,
     credentials: 'include',
+    // Personalized responses must never be served from the HTTP cache: a
+    // revalidated 304 has no JSON body and would look like a failed request.
+    cache: 'no-store',
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   };
 

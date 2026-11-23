@@ -56,6 +56,10 @@ export function PostJobModal({ isOpen, onClose }: PostJobModalProps) {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const handleSelectChange = (name: 'departmentId', value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -145,7 +149,12 @@ export function PostJobModal({ isOpen, onClose }: PostJobModalProps) {
             </div>
           )}
 
-          <JobFormFields values={formData} departments={departments} onChange={handleChange} />
+          <JobFormFields
+            values={formData}
+            departments={departments}
+            onChange={handleChange}
+            onSelectChange={handleSelectChange}
+          />
 
           <div className="flex gap-3 border-t edge pt-5">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">

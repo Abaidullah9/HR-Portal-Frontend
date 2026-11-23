@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-interface TablePagerProps {
+export interface TablePagerProps {
   page: number
   pageCount: number
   total: number
@@ -19,12 +19,12 @@ export function TablePager({ page, pageCount, total, pageSize, onPageChange }: T
   return (
     <nav
       aria-label="Pagination"
-      className="flex flex-wrap items-center justify-between gap-3 border-t edge px-6 py-3"
+      className="flex flex-wrap items-center justify-between gap-3 border-t edge px-4 py-3 sm:px-6"
     >
       <p className="text-xs text-foreground/65" aria-live="polite">
         Showing {from}–{to} of {total}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
         <Button
           type="button"
           variant="outline"
@@ -37,8 +37,9 @@ export function TablePager({ page, pageCount, total, pageSize, onPageChange }: T
           <ChevronLeft size={15} aria-hidden="true" />
           Previous
         </Button>
-        <span className="text-xs tabular-nums text-foreground/65">
-          Page {page + 1} of {pageCount}
+        <span className="whitespace-nowrap text-xs tabular-nums text-foreground/65">
+          <span className="sr-only">Page </span>
+          {page + 1} / {pageCount}
         </span>
         <Button
           type="button"

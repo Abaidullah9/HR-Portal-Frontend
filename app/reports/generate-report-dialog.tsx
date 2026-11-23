@@ -4,9 +4,23 @@ import { useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useAppDispatch } from '@/lib/redux/store'
 import { generateReport } from '@/lib/redux/slices/reportSlice'
 import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
+
+const REPORT_CATEGORIES = [
+  { value: 'attendance', label: 'Attendance' },
+  { value: 'payroll', label: 'Payroll' },
+  { value: 'performance', label: 'Performance' },
+  { value: 'recruitment', label: 'Recruitment' },
+]
 
 /**
  * Mounted only while open: the form starts empty each time, and the dialog's
@@ -103,17 +117,22 @@ export function GenerateReportDialog({ onClose }: { onClose: () => void }) {
             >
               Category
             </label>
-            <select
-              id="report-category"
+            <Select
+              items={REPORT_CATEGORIES}
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70"
+              onValueChange={(value) => setCategory(value ?? 'attendance')}
             >
-              <option value="attendance">Attendance</option>
-              <option value="payroll">Payroll</option>
-              <option value="performance">Performance</option>
-              <option value="recruitment">Recruitment</option>
-            </select>
+              <SelectTrigger id="report-category" className="h-10 w-full">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {REPORT_CATEGORIES.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-3 pt-5 border-t edge">

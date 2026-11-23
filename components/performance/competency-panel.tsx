@@ -1,6 +1,7 @@
 import { Award } from 'lucide-react'
 import { DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
+import { ProgressBar } from '@/components/common/progress-bar'
 
 interface CompetencyPanelProps {
   skills: { skillName: string; skillRating: number; targetRating?: number }[]
@@ -40,12 +41,11 @@ export function CompetencyPanel({ skills, loading }: CompetencyPanelProps) {
                 <span className="text-lg font-bold text-foreground">{comp.skillRating}</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 overflow-hidden rounded-full bg-foreground/10 dark:bg-white/5">
-                  <div
-                    className="h-full rounded-full brand transition-all duration-300 group-hover:scale-105"
-                    style={{ width: `${(comp.skillRating / 5) * 100}%` }}
-                  />
-                </div>
+                <ProgressBar
+                  className="flex-1"
+                  value={(comp.skillRating / 5) * 100}
+                  label={`${comp.skillName} proficiency`}
+                />
                 <span className="text-xs text-foreground/65">Target: {comp.targetRating}</span>
               </div>
             </div>

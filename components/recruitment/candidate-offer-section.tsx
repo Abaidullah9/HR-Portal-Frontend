@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/components/common/toast'
 import { apiClient } from '@/lib/api/client'
 import { hireCandidate } from '@/lib/api/profile'
@@ -141,19 +148,25 @@ export function CandidateOfferSection({
           <label htmlFor="hire-department" className="mb-1 block text-sm font-medium">
             Department for the employee record
           </label>
-          <select
-            id="hire-department"
-            value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
-            className="h-10 w-full rounded-xl border edge bg-white/80 px-3 text-sm"
+          <Select
+            items={departments.map((department) => ({
+              value: department._id,
+              label: department.name,
+            }))}
+            value={departmentId || null}
+            onValueChange={(value) => setDepartmentId(value ?? '')}
           >
-            <option value="">Use the job posting&apos;s department</option>
-            {departments.map((department) => (
-              <option key={department._id} value={department._id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="hire-department" className="h-10 w-full">
+              <SelectValue placeholder="Use the job posting's department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((department) => (
+                <SelectItem key={department._id} value={department._id}>
+                  {department.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
     </section>

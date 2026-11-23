@@ -63,7 +63,7 @@ export function LeaveTable({
     {
       header: 'Reason',
       accessor: 'reasonForLeave',
-      className: 'text-foreground/60 text-sm max-w-[180px] truncate block',
+      className: 'text-foreground/60 text-sm max-w-44 truncate block',
     },
     {
       header: 'Status',
@@ -80,6 +80,7 @@ export function LeaveTable({
     columns.push({
       header: 'Actions',
       accessor: '_id',
+      sortable: false,
       className: 'text-right',
       render: (_id, row) =>
         row.leaveStatus === 'pending' ? (

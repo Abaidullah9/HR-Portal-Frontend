@@ -4,9 +4,23 @@ import { useState } from 'react'
 import { Banknote, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/components/common/toast'
 import { recordCompensation, type EmployeeProfile } from '@/lib/api/profile'
 import { formatDate, toSentenceCase } from '@/lib/utils'
+
+const REASONS = [
+  { value: 'raise', label: 'Raise' },
+  { value: 'promotion', label: 'Promotion' },
+  { value: 'adjustment', label: 'Adjustment' },
+  { value: 'correction', label: 'Correction' },
+]
 
 interface CompensationPanelProps {
   profile: EmployeeProfile
@@ -119,17 +133,22 @@ export function CompensationPanel({ profile, canManage, onChanged }: Compensatio
               <label htmlFor="reason" className="mb-1 block text-sm font-medium">
                 Reason
               </label>
-              <select
-                id="reason"
+              <Select
+                items={REASONS}
                 value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                className="h-10 w-full rounded-xl border edge bg-white/80 px-3 text-sm"
+                onValueChange={(value) => setReason(value ?? 'raise')}
               >
-                <option value="raise">Raise</option>
-                <option value="promotion">Promotion</option>
-                <option value="adjustment">Adjustment</option>
-                <option value="correction">Correction</option>
-              </select>
+                <SelectTrigger id="reason" className="h-10 w-full">
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REASONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label htmlFor="comp-note" className="mb-1 block text-sm font-medium">

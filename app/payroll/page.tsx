@@ -5,9 +5,11 @@ import { CheckCircle, DollarSign, Download, Plus, TrendingUp } from 'lucide-reac
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { StatCard } from '@/components/common/stat-card'
+import { AccessDenied } from '@/components/common/access-denied'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/common/toast'
 import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchPayroll, updatePayrollStatus } from '@/lib/redux/slices/payrollSlice'
 import { downloadCsv, toCsv } from '@/lib/csv'
@@ -21,7 +23,8 @@ import { PayrollRunsPanel } from './payroll-runs-panel'
 export default function PayrollPage() {
   const dispatch = useAppDispatch()
   const toast = useToast()
-  const { can } = usePermissions()
+  const { can, canView } = usePermissions()
+  const { user } = useAppSelector((state) => state.auth)
   const { records, loading, error, pagination } = useAppSelector((state) => state.payroll)
   const [page, setPage] = useState(0)
   const [markingId, setMarkingId] = useState<string | null>(null)
@@ -40,13 +43,18 @@ export default function PayrollPage() {
     }
   }, [])
 
-  useEffect(() => {
-    void dispatch(fetchPayroll({ page: page + 1, limit: PAGE_SIZE }))
-  }, [dispatch, page])
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('payroll')
 
   useEffect(() => {
-    void loadSummary()
-  }, [loadSummary])
+    if (roleReady && canRead) {
+      void dispatch(fetchPayroll({ page: page + 1, limit: PAGE_SIZE }))
+    }
+  }, [dispatch, page, roleReady, canRead])
+
+  useEffect(() => {
+    if (roleReady && canRead) void loadSummary()
+  }, [loadSummary, roleReady, canRead])
 
   // Totals come from the API so they cover every record, not just this page.
   const stats = [
@@ -110,6 +118,20 @@ export default function PayrollPage() {
 
     // The thunk just loaded the whole ledger over this page; restore it.
     await dispatch(fetchPayroll({ page: page + 1, limit: PAGE_SIZE }))
+  }
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-10">
+          <SectionHeader
+            title="Payroll management"
+            description="Manage salaries, allowances, deductions and payment statuses"
+          />
+          <AccessDenied area="payroll" />
+        </div>
+      </AppLayout>
+    )
   }
 
   return (

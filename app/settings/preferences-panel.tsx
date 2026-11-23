@@ -1,12 +1,25 @@
 'use client'
 
 import { LANGUAGES, useI18n, type Language } from '@/lib/i18n'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 /**
  * Notification and timezone blocks are display-only until the backend stores
  * per-user preferences, so those controls render disabled. Language is stored
  * on this device and applied to the navigation shell.
  */
+const TIMEZONES = [
+  { value: 'UTC-8 (Pacific Time)', label: 'UTC-8 (Pacific Time)' },
+  { value: 'UTC-5 (Eastern Time)', label: 'UTC-5 (Eastern Time)' },
+  { value: 'UTC (GMT)', label: 'UTC (GMT)' },
+]
+
 const NOTIFICATIONS = [
   { title: 'Email Notifications', description: 'Receive email updates' },
   { title: 'Leave Requests', description: 'Get notified about leave requests' },
@@ -56,18 +69,22 @@ export function PreferencesPanel() {
               <label htmlFor="pref-language" className="text-sm font-medium text-foreground">
                 Language
               </label>
-              <select
-                id="pref-language"
+              <Select
+                items={LANGUAGES}
                 value={language}
-                onChange={(event) => setLanguage(event.target.value as Language)}
-                className="mt-2 w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md dark:edge dark:surface-70"
+                onValueChange={(value) => setLanguage((value ?? 'en') as Language)}
               >
-                {LANGUAGES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="pref-language" className="mt-2 h-10 w-full">
+                  <SelectValue placeholder="Select a language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-xs text-foreground/60">
                 Translates the navigation and shell on this device. Page content stays in your
                 organization&apos;s working language.
@@ -77,15 +94,18 @@ export function PreferencesPanel() {
               <label htmlFor="pref-timezone" className="text-sm font-medium text-foreground">
                 Time Zone
               </label>
-              <select
-                id="pref-timezone"
-                disabled
-                className="mt-2 w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md dark:edge dark:surface-70"
-              >
-                <option>UTC-8 (Pacific Time)</option>
-                <option>UTC-5 (Eastern Time)</option>
-                <option>UTC (GMT)</option>
-              </select>
+              <Select items={TIMEZONES} defaultValue="UTC-8 (Pacific Time)" disabled>
+                <SelectTrigger id="pref-timezone" className="mt-2 h-10 w-full">
+                  <SelectValue placeholder="UTC-8 (Pacific Time)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONES.map((zone) => (
+                    <SelectItem key={zone.value} value={zone.value}>
+                      {zone.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-xs text-foreground/60">
                 The organization timezone is set on the server (ORGANIZATION_TIMEZONE) and applies
                 to attendance and leave for everyone.

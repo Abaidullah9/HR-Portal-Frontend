@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Download, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { StatCard } from '@/components/common/stat-card'
+import { ProgressBar } from '@/components/common/progress-bar'
 import { downloadCsv, toCsv } from '@/lib/csv'
 import { fetchAnalytics, type AnalyticsSummary } from '@/lib/api/analytics'
 import { toSentenceCase } from '@/lib/utils'
@@ -22,9 +23,7 @@ function Bar({ label, value, max }: { label: string; value: number; max: number 
         <span className="capitalize text-foreground/75">{label}</span>
         <span className="tabular-nums font-medium text-foreground">{value}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
-        <div className="h-full rounded-full brand" style={{ width: `${width}%` }} />
-      </div>
+      <ProgressBar value={width} label={`${label} headcount share`} />
     </div>
   )
 }

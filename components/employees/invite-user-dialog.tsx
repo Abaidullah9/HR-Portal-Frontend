@@ -4,8 +4,21 @@ import { useRef, useState } from 'react'
 import { Mail, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
 import { inviteUser } from '@/lib/api/profile'
+
+const ROLES = [
+  { value: 'Employee', label: 'Employee' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'HR', label: 'HR' },
+]
 
 interface InviteUserDialogProps {
   isOpen: boolean
@@ -98,16 +111,22 @@ export function InviteUserDialog({ isOpen, onClose }: InviteUserDialogProps) {
             <label htmlFor="invite-role" className="mb-1 block text-sm font-medium">
               Role
             </label>
-            <select
-              id="invite-role"
+            <Select
+              items={ROLES}
               value={roleName}
-              onChange={(event) => setRoleName(event.target.value)}
-              className="h-10 w-full rounded-xl border edge bg-white/80 px-3 text-sm"
+              onValueChange={(value) => setRoleName(value ?? 'Employee')}
             >
-              <option>Employee</option>
-              <option>Manager</option>
-              <option>HR</option>
-            </select>
+              <SelectTrigger id="invite-role" className="h-10 w-full">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {error && (

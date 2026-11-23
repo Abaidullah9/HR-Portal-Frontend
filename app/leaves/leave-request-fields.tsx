@@ -1,6 +1,13 @@
 'use client'
 
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Employee } from '@/types/employee'
 
 export interface LeaveFormValues {
@@ -17,10 +24,14 @@ interface LeaveRequestFieldsProps {
   employees: Employee[]
 }
 
-const selectClass =
-  'w-full h-10 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:outline-none focus:ring-2 ring-brand focus:border-brand dark:edge dark:surface-70'
-
 const labelClass = 'block text-sm font-medium text-foreground mb-2'
+
+const LEAVE_TYPES = [
+  { value: 'vacation', label: 'Vacation' },
+  { value: 'sick', label: 'Sick Leave' },
+  { value: 'personal', label: 'Personal Leave' },
+  { value: 'maternity', label: 'Maternity / Paternity' },
+]
 
 export function LeaveRequestFields({ formData, onChange, employees }: LeaveRequestFieldsProps) {
   return (
@@ -29,36 +40,47 @@ export function LeaveRequestFields({ formData, onChange, employees }: LeaveReque
         <label htmlFor="leave-employee" className={labelClass}>
           Employee
         </label>
-        <select
-          id="leave-employee"
-          value={formData.employeeId}
-          onChange={(e) => onChange({ employeeId: e.target.value })}
-          className={selectClass}
+        <Select
+          items={employees.map((emp) => ({
+            value: emp._id,
+            label: `${emp.name} (${emp.employeeCode})`,
+          }))}
+          value={formData.employeeId || null}
+          onValueChange={(value) => onChange({ employeeId: value ?? '' })}
         >
-          <option value="">Select Employee</option>
-          {employees.map((emp) => (
-            <option key={emp._id} value={emp._id}>
-              {emp.name} ({emp.employeeCode})
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="leave-employee" className="h-10 w-full">
+            <SelectValue placeholder="Select Employee" />
+          </SelectTrigger>
+          <SelectContent>
+            {employees.map((emp) => (
+              <SelectItem key={emp._id} value={emp._id}>
+                {emp.name} ({emp.employeeCode})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
         <label htmlFor="leave-type" className={labelClass}>
           Leave Type
         </label>
-        <select
-          id="leave-type"
+        <Select
+          items={LEAVE_TYPES}
           value={formData.leaveType}
-          onChange={(e) => onChange({ leaveType: e.target.value })}
-          className={selectClass}
+          onValueChange={(value) => onChange({ leaveType: value ?? 'vacation' })}
         >
-          <option value="vacation">Vacation</option>
-          <option value="sick">Sick Leave</option>
-          <option value="personal">Personal Leave</option>
-          <option value="maternity">Maternity / Paternity</option>
-        </select>
+          <SelectTrigger id="leave-type" className="h-10 w-full">
+            <SelectValue placeholder="Select leave type" />
+          </SelectTrigger>
+          <SelectContent>
+            {LEAVE_TYPES.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

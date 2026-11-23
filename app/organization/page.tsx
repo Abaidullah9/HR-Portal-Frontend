@@ -7,8 +7,10 @@ import Link from 'next/link'
 import { Building2, GitBranch, Mail, Phone, MapPin, Users } from 'lucide-react'
 import { DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
+import { AccessDenied } from '@/components/common/access-denied'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { HolidayCalendar } from '@/components/organization/holiday-calendar'
 import {
   fetchOrganizationSettings,
@@ -22,13 +24,32 @@ export default function OrganizationPage() {
     (state) => state.organization,
   )
   const { canView } = usePermissions()
-  const canManage = canView('organization')
+  const { user } = useAppSelector((state) => state.auth)
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('organization')
 
+  // Employee and Manager roles hold no read_OrganizationSetting; requesting the
+  // page's data for them only produced three 403s and an error banner.
   useEffect(() => {
+    if (!canRead) return
     dispatch(fetchOrganizationSettings())
     dispatch(fetchOrgDepartments())
     dispatch(fetchTeams())
-  }, [dispatch])
+  }, [dispatch, canRead])
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-10">
+          <SectionHeader
+            title="Organization & Departments"
+            description="View organizational hierarchy, department leaders, and active teams"
+          />
+          <AccessDenied area="the organization module" />
+        </div>
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>
@@ -77,9 +98,11 @@ export default function OrganizationPage() {
                     </div>
                   )}
                   {settings.address && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       <MapPin size={14} className="shrink-0 text-foreground/60" />
-                      <span className="truncate">{settings.address}</span>
+                      {/* Wraps instead of truncating: at 320px an ellipsis hid
+                          most of the street address. */}
+                      <span className="wrap-anywhere">{settings.address}</span>
                     </div>
                   )}
                 </div>
@@ -130,7 +153,7 @@ export default function OrganizationPage() {
           )}
         </div>
 
-        <HolidayCalendar canManage={canManage} />
+        <HolidayCalendar canManage={canRead} />
 
         {/* Teams */}
         {teams.length > 0 && (

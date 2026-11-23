@@ -6,7 +6,10 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
+import { AccessDenied } from '@/components/common/access-denied'
 import { Button } from '@/components/ui/button'
+import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchReports } from '@/lib/redux/slices/reportSlice'
 import { formatDate } from '@/lib/utils'
@@ -17,11 +20,32 @@ import { AnalyticsPanel } from './analytics-panel'
 export default function ReportsPage() {
   const dispatch = useAppDispatch()
   const { reports, loading, error } = useAppSelector((state) => state.reports)
+  const { user } = useAppSelector((state) => state.auth)
+  const { canView } = usePermissions()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // The session carries the role's actions; until it does, no request is made
+  // for a module this role may not hold.
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('reports')
+
   useEffect(() => {
-    dispatch(fetchReports())
-  }, [dispatch])
+    if (roleReady && canRead) dispatch(fetchReports())
+  }, [dispatch, roleReady, canRead])
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-10">
+          <SectionHeader
+            title="Reports & Analytics"
+            description="Generate and view organization reports and export audit summaries"
+          />
+          <AccessDenied area="reports" />
+        </div>
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>
@@ -97,8 +121,10 @@ export default function ReportsPage() {
                   className: 'text-foreground/65 text-sm',
                 },
                 {
-                  header: '',
+                  // An unlabelled header would make the sort control nameless.
+                  header: 'Download',
                   accessor: '_id',
+                  sortable: false,
                   render: (_id, row) =>
                     row.fileUrl ? (
                       <a

@@ -1,21 +1,29 @@
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   EMPLOYEE_FIELD_IDS,
   FieldError,
   POSITIONS,
   describedBy,
   labelClass,
-  selectClass,
   type EmployeeField,
   type EmployeeFormValues,
 } from './employee-field-shared'
+import { DepartmentSelectField } from './department-select-field'
 
 export { EMPLOYEE_FIELD_IDS, POSITIONS }
 export type { EmployeeField, EmployeeFormValues }
 
 interface EmployeeFormFieldsProps {
   formData: EmployeeFormValues
-  onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onSelectChange: (name: 'departmentId' | 'position' | 'employmentType', value: string) => void
   departments: { _id: string; name: string }[]
   errors?: Partial<Record<EmployeeField, string>>
 }
@@ -23,6 +31,7 @@ interface EmployeeFormFieldsProps {
 export function EmployeeFormFields({
   formData,
   onChange,
+  onSelectChange,
   departments,
   errors = {},
 }: EmployeeFormFieldsProps) {
@@ -82,46 +91,33 @@ export function EmployeeFormFields({
         <FieldError field="employeeCode" message={errors.employeeCode} />
       </div>
 
-      <div>
-        <label htmlFor="employee-department" className={labelClass}>
-          Department *
-        </label>
-        <select
-          id="employee-department"
-          name="departmentId"
-          value={formData.departmentId}
-          onChange={onChange}
-          className={selectClass}
-          aria-invalid={errors.departmentId ? true : undefined}
-          aria-describedby={describedBy('departmentId', errors.departmentId)}
-        >
-          <option value="">Select department</option>
-          {departments.map((dept) => (
-            <option key={dept._id} value={dept._id}>
-              {dept.name}
-            </option>
-          ))}
-        </select>
-        <FieldError field="departmentId" message={errors.departmentId} />
-      </div>
+      <DepartmentSelectField
+        value={formData.departmentId}
+        departments={departments}
+        onChange={(value) => onSelectChange('departmentId', value)}
+        error={errors.departmentId}
+      />
 
       <div>
         <label htmlFor="employee-position" className={labelClass}>
           Position
         </label>
-        <select
-          id="employee-position"
-          name="position"
+        <Select
+          items={POSITIONS.map((position) => ({ value: position, label: position }))}
           value={formData.position}
-          onChange={onChange}
-          className={selectClass}
+          onValueChange={(value) => onSelectChange('position', value ?? '')}
         >
-          {POSITIONS.map((pos) => (
-            <option key={pos} value={pos}>
-              {pos}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="employee-position" className="h-10 w-full">
+            <SelectValue placeholder="Select a position" />
+          </SelectTrigger>
+          <SelectContent>
+            {POSITIONS.map((pos) => (
+              <SelectItem key={pos} value={pos}>
+                {pos}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -161,18 +157,26 @@ export function EmployeeFormFields({
         <label htmlFor="employee-employment-type" className={labelClass}>
           Employment type
         </label>
-        <select
-          id="employee-employment-type"
-          name="employmentType"
+        <Select
+          items={[
+            { value: 'full-time', label: 'Full time' },
+            { value: 'part-time', label: 'Part time' },
+            { value: 'contract', label: 'Contract' },
+            { value: 'intern', label: 'Intern' },
+          ]}
           value={formData.employmentType}
-          onChange={onChange}
-          className={selectClass}
+          onValueChange={(value) => onSelectChange('employmentType', value ?? '')}
         >
-          <option value="full-time">Full time</option>
-          <option value="part-time">Part time</option>
-          <option value="contract">Contract</option>
-          <option value="intern">Intern</option>
-        </select>
+          <SelectTrigger id="employee-employment-type" className="h-10 w-full">
+            <SelectValue placeholder="Select employment type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="full-time">Full time</SelectItem>
+            <SelectItem value="part-time">Part time</SelectItem>
+            <SelectItem value="contract">Contract</SelectItem>
+            <SelectItem value="intern">Intern</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="sm:col-span-2">

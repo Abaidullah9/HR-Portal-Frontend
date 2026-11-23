@@ -1,6 +1,13 @@
 'use client'
 
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export interface JobFormValues {
   position: string
@@ -13,12 +20,16 @@ export interface JobFormValues {
 interface JobFormFieldsProps {
   values: JobFormValues
   departments: { _id: string; name: string }[]
-  onChange: (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-  ) => void
+  onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
+  onSelectChange: (name: 'departmentId', value: string) => void
 }
 
-export function JobFormFields({ values, departments, onChange }: JobFormFieldsProps) {
+export function JobFormFields({
+  values,
+  departments,
+  onChange,
+  onSelectChange,
+}: JobFormFieldsProps) {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -44,21 +55,27 @@ export function JobFormFields({ values, departments, onChange }: JobFormFieldsPr
           >
             Department *
           </label>
-          <select
-            id="job-department"
+          <Select
+            items={departments.map((department) => ({
+              value: department._id,
+              label: department.name,
+            }))}
             name="departmentId"
-            value={values.departmentId}
-            onChange={onChange}
+            value={values.departmentId || null}
+            onValueChange={(value) => onSelectChange('departmentId', value ?? '')}
             required
-            className="h-10 w-full rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:border-brand focus:outline-none focus:ring-2 ring-brand dark:edge dark:surface-70"
           >
-            <option value="">Select department</option>
-            {departments.map((department) => (
-              <option key={department._id} value={department._id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="job-department" className="h-10 w-full">
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((department) => (
+                <SelectItem key={department._id} value={department._id}>
+                  {department.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>

@@ -20,7 +20,6 @@ export function ProtectedWrapper({ children }: { children: React.ReactNode }) {
   const isPublic = PUBLIC_ROUTES.includes(pathname)
 
   const [checked, setChecked] = useState(false)
-  const probeStarted = useRef(false)
   const refreshedFor = useRef<string | null>(null)
 
   // Restore the session once per page load. Public routes skip the probe: it
@@ -30,18 +29,18 @@ export function ProtectedWrapper({ children }: { children: React.ReactNode }) {
       setChecked(true)
       return
     }
-    if (probeStarted.current) return
-    probeStarted.current = true
-
-    let cancelled = false
+    // StrictMode runs this effect twice in development (setup → cleanup →
+    // setup). Each run must own its probe, otherwise the cleanup cancels the
+    // only check and the gate stays on "Verifying session…" forever.
+    let active = true
     const checkAuth = async () => {
       await dispatch(fetchCurrentUser())
-      if (!cancelled) setChecked(true)
+      if (active) setChecked(true)
     }
 
     void checkAuth()
     return () => {
-      cancelled = true
+      active = false
     }
   }, [dispatch, isPublic])
 

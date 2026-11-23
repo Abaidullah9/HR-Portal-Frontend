@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
-import { StatCard } from '@/components/common/stat-card'
-import { Button } from '@/components/ui/button'
+import { AccessDenied } from '@/components/common/access-denied'
 import { useToast } from '@/components/common/toast'
+import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import {
   fetchAttendance,
@@ -24,10 +24,20 @@ import {
 import type { AttendanceRecord } from '@/types/attendance'
 import { AttendanceTable } from './attendance-table'
 import { CheckInBar } from './check-in-bar'
+import { AttendanceToolbar } from '@/components/attendance/attendance-toolbar'
+import { AttendanceSummaryCards } from '@/components/attendance/attendance-summary-cards'
 
 export default function AttendancePage() {
   const dispatch = useAppDispatch()
   const toast = useToast()
+  const { canView } = usePermissions()
+  // Only roles that can read the employee directory may use the check-in bar.
+  // Requesting it as an Employee is a guaranteed 403.
+  const canPickEmployees = canView('employees')
+  // HR has no read_Attendance, so its table request would only return 403.
+  const { user } = useAppSelector((state) => state.auth)
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('attendance')
   const { records, loading, error, pagination } = useAppSelector((state) => state.attendance)
   const { employees } = useAppSelector((state) => state.employee)
   const [page, setPage] = useState(0)
@@ -63,47 +73,22 @@ export default function AttendancePage() {
   }, [today])
 
   useEffect(() => {
+    if (!canRead) return
     void dispatch(
       fetchAttendance({ page: page + 1, limit: PAGE_SIZE, date: selectedDate || undefined }),
     )
-  }, [dispatch, page, selectedDate])
+  }, [dispatch, page, selectedDate, canRead])
 
   useEffect(() => {
+    if (!canPickEmployees) return
     void dispatch(fetchEmployees({ limit: PICKER_LIMIT }))
     void loadToday()
-  }, [dispatch, loadToday])
+  }, [dispatch, loadToday, canPickEmployees])
 
   useEffect(() => {
+    if (!canRead) return
     void loadSummary(selectedDate || undefined)
-  }, [loadSummary, selectedDate])
-
-  // The cards come from the server's totals, so they stay correct regardless of
-  // how many rows are loaded or filtered.
-  const stats = useMemo(() => {
-    const unknown = '--'
-    return [
-      {
-        title: selectedDate ? 'Present that day' : 'Present today',
-        value: summary ? String(summary.present) : unknown,
-        icon: CheckCircle,
-      },
-      {
-        title: 'Absent',
-        value: summary ? String(summary.absent) : unknown,
-        icon: XCircle,
-      },
-      {
-        title: 'Late arrivals',
-        value: summary ? String(summary.late) : unknown,
-        icon: AlertCircle,
-      },
-      {
-        title: 'Check-in rate',
-        value: summary?.checkInRate != null ? `${summary.checkInRate}%` : unknown,
-        icon: Clock,
-      },
-    ]
-  }, [summary, selectedDate])
+  }, [loadSummary, selectedDate, canRead])
 
   const refresh = async () => {
     await dispatch(
@@ -152,6 +137,24 @@ export default function AttendancePage() {
   }
 
   const message = error ?? summaryError
+  const changeDate = (value: string) => {
+    setSelectedDate(value)
+    setPage(0)
+  }
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-10">
+          <SectionHeader
+            title="Attendance"
+            description="Track and manage real-time employee attendance"
+          />
+          <AccessDenied area="the attendance module" />
+        </div>
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>
@@ -167,62 +170,31 @@ export default function AttendancePage() {
           </div>
         )}
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
+        {/* Totals come from the server, so they stay correct however the table is paged. */}
+        <AttendanceSummaryCards summary={summary} selectedDate={selectedDate} />
 
-        <CheckInBar
-          employees={employees}
-          records={todayRecords}
-          busy={busy}
-          onCheckIn={handleCheckIn}
-          onCheckOut={handleCheckOut}
-        />
-
-        <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor="attendance-date" className="text-sm font-medium text-foreground/60">
-            Filter by date
-          </label>
-          <input
-            id="attendance-date"
-            type="date"
-            value={selectedDate}
-            onChange={(event) => {
-              setSelectedDate(event.target.value)
-              setPage(0)
-            }}
-            className="h-10 w-44 rounded-xl border edge bg-white/80 px-3 text-sm text-foreground shadow-sm backdrop-blur-md focus:border-brand focus:outline-none focus:ring-2 ring-brand dark:edge dark:surface-70"
+        {canPickEmployees && (
+          <CheckInBar
+            employees={employees}
+            records={todayRecords}
+            busy={busy}
+            onCheckIn={handleCheckIn}
+            onCheckOut={handleCheckOut}
           />
-          {selectedDate && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedDate('')
-                setPage(0)
-              }}
-              className="text-foreground/60 hover:text-foreground"
-            >
-              Clear filter
-            </Button>
-          )}
-          <p className="text-xs text-foreground/55">
-            Late after {lateAfter} per organization policy
-          </p>
-        </div>
+        )}
+
+        <AttendanceToolbar
+          date={selectedDate}
+          lateAfter={lateAfter}
+          onDateChange={changeDate}
+        />
 
         <AttendanceTable
           records={records}
           loading={loading}
           filtered={Boolean(selectedDate)}
           lateAfter={lateAfter}
-          onClearFilter={() => {
-            setSelectedDate('')
-            setPage(0)
-          }}
+          onClearFilter={() => changeDate('')}
           pagination={{
             page,
             pageCount: pagination.totalPages,

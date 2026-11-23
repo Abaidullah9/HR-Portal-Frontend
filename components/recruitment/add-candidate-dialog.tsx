@@ -4,6 +4,13 @@ import { useRef, useState } from 'react'
 import { UserPlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { createCandidate } from '@/lib/redux/slices/recruitmentSlice'
@@ -95,20 +102,27 @@ export function AddCandidateDialog({ isOpen, onClose }: { isOpen: boolean; onClo
             <label htmlFor="candidate-posting" className="mb-1 block text-sm font-medium">
               Job posting
             </label>
-            <select
-              id="candidate-posting"
-              value={jobPostingId}
-              onChange={(event) => setJobPostingId(event.target.value)}
+            <Select
+              items={jobPostings.map((posting) => ({
+                value: posting._id,
+                label: posting.position,
+              }))}
+              name="jobPostingId"
+              value={jobPostingId || null}
+              onValueChange={(value) => setJobPostingId(value ?? '')}
               required
-              className="h-10 w-full rounded-xl border edge bg-white/80 px-3 text-sm"
             >
-              <option value="">Select a posting…</option>
-              {jobPostings.map((posting) => (
-                <option key={posting._id} value={posting._id}>
-                  {posting.position}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="candidate-posting" className="h-10 w-full">
+                <SelectValue placeholder="Select a posting…" />
+              </SelectTrigger>
+              <SelectContent>
+                {jobPostings.map((posting) => (
+                  <SelectItem key={posting._id} value={posting._id}>
+                    {posting.position}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label htmlFor="candidate-name" className="mb-1 block text-sm font-medium">

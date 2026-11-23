@@ -15,6 +15,8 @@ export interface ColumnDef<T> {
   className?: string
   /** Supply when the raw value is an object or JSX and cannot be compared. */
   sortValue?: (row: T) => string | number | null | undefined
+  /** Set false for action columns, whose values have no meaningful order. */
+  sortable?: boolean
 }
 
 /** Page state owned by the caller when rows come from the server. */
@@ -55,6 +57,9 @@ export function DataTable<T extends Record<string, any>>({
     const set = new Set<string>()
     if (serverPaged) return set
     for (const column of columns) {
+      // A column with no header text has no name to announce for its sort
+      // control, so it stays unsorted (an actions column, for example).
+      if (!column.header.trim() || column.sortable === false) continue
       if (column.sortValue) {
         set.add(String(column.accessor))
         continue
@@ -100,7 +105,7 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+        <table className="w-full min-w-lg border-collapse">
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
             <tr>
@@ -119,7 +124,7 @@ export function DataTable<T extends Record<string, any>>({
                           : 'descending'
                         : undefined
                     }
-                    className="wrap-anywhere px-6 py-4 text-left text-sm font-semibold text-foreground/80"
+                    className="whitespace-nowrap px-6 py-4 text-left text-sm font-semibold text-foreground/80"
                   >
                     {sortable ? (
                       <button
@@ -128,7 +133,7 @@ export function DataTable<T extends Record<string, any>>({
                           setSort(nextSortState(sort, key))
                           setPage(0)
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-md text-left font-semibold hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        className="inline-flex min-h-6 items-center gap-1.5 rounded-md text-left font-semibold hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                       >
                         {column.header}
                         {isSorted ? (

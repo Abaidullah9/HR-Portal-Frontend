@@ -44,6 +44,7 @@ export const loginUser = createAsyncThunk<
         'Content-Type': 'application/json',
       },
       credentials: 'include',
+      cache: 'no-store',
       body: JSON.stringify(credentials),
     });
 
@@ -78,6 +79,7 @@ export const registerUser = createAsyncThunk<
         'Content-Type': 'application/json',
       },
       credentials: 'include',
+      cache: 'no-store',
       body: JSON.stringify(credentials),
     });
 
@@ -112,6 +114,7 @@ export const fetchCurrentUser = createAsyncThunk<
         'Content-Type': 'application/json',
       },
       credentials: 'include',
+      cache: 'no-store',
     });
 
     const data: ApiResponse<AuthUser> = await response.json();

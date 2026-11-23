@@ -6,6 +6,10 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
+import { AccessDenied } from '@/components/common/access-denied'
+import { useAppSelector } from '@/lib/redux/store'
+import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { fetchAuditLogs, type AuditLogEntry } from '@/lib/api/insights'
 
 const formatWhen = (value: string) => {
@@ -23,6 +27,10 @@ export default function AuditPage() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAppSelector((state) => state.auth)
+  const { canView } = usePermissions()
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('audit')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -38,8 +46,22 @@ export default function AuditPage() {
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (roleReady && canRead) void load()
+  }, [load, roleReady, canRead])
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-10">
+          <SectionHeader
+            title="Audit trail"
+            description="Who changed what: leave decisions, payroll runs and employee removals"
+          />
+          <AccessDenied area="the audit trail" />
+        </div>
+      </AppLayout>
+    )
+  }
 
   return (
     <AppLayout>

@@ -34,11 +34,13 @@ export function PipelineBoard({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 overflow-x-auto md:grid-cols-3 xl:grid-cols-6">
+      {/* Columns share the width instead of holding a fixed minimum: a min-width
+          wider than its grid track pushed each card over the next column. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {STAGES.map((stage) => {
           const bucket = candidates.filter((candidate) => candidate.status === stage)
           return (
-            <section key={stage} aria-labelledby={`stage-${stage}`} className="min-w-[14rem] space-y-3">
+            <section key={stage} aria-labelledby={`stage-${stage}`} className="min-w-0 space-y-3">
               <h3 id={`stage-${stage}`} className="flex items-center justify-between text-sm font-semibold">
                 {toSentenceCase(stage)}
                 <span className="rounded-full border edge px-2 py-0.5 text-xs text-foreground/60">

@@ -7,7 +7,12 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
 import { Input } from '@/components/ui/input'
 import { EmptyState, ErrorState } from '@/components/common/state-panel'
+import { Button } from '@/components/ui/button'
+import { AccessDenied } from '@/components/common/access-denied'
 import { fetchOrgChart, type OrgChartNode } from '@/lib/api/profile'
+import { useAppSelector } from '@/lib/redux/store'
+import { usePermissions } from '@/lib/hooks/use-permissions'
+import { roleNameOf } from '@/lib/auth/roles'
 import { cn } from '@/lib/utils'
 
 export default function OrgChartPage() {
@@ -15,6 +20,10 @@ export default function OrgChartPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const { user } = useAppSelector((state) => state.auth)
+  const { canView } = usePermissions()
+  const roleReady = Boolean(user && roleNameOf(user))
+  const canRead = canView('organization')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -29,8 +38,8 @@ export default function OrgChartPage() {
   }, [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (roleReady && canRead) void load()
+  }, [load, roleReady, canRead])
 
   const { roots, childrenOf } = useMemo(() => {
     const byManager = new Map<string, OrgChartNode[]>()
@@ -54,8 +63,20 @@ export default function OrgChartPage() {
     node.position.toLowerCase().includes(needle) ||
     node.department.toLowerCase().includes(needle)
 
+  // A match deep in the tree must stay reachable: filtering out its manager
+  // would otherwise hide the very person the query found. Ancestors are kept
+  // as context, and the visited set guards against a manager cycle.
+  const subtreeMatches = (node: OrgChartNode, seen = new Set<string>()): boolean => {
+    if (matches(node)) return true
+    if (seen.has(node.id)) return false
+    seen.add(node.id)
+    return childrenOf(node.id).some((report) => subtreeMatches(report, seen))
+  }
+
+  const hasMatches = !needle || nodes.some((node) => matches(node))
+
   const renderNode = (node: OrgChartNode, depth: number): React.ReactNode => {
-    if (!matches(node)) return null
+    if (!subtreeMatches(node)) return null
     const reports = childrenOf(node.id)
 
     return (
@@ -85,6 +106,20 @@ export default function OrgChartPage() {
           </ul>
         )}
       </li>
+    )
+  }
+
+  if (roleReady && !canRead) {
+    return (
+      <AppLayout>
+        <div className="space-y-8">
+          <SectionHeader
+            title="Org chart"
+            description="Who reports to whom, built from each employee's manager."
+          />
+          <AccessDenied area="the organization chart" />
+        </div>
+      </AppLayout>
     )
   }
 
@@ -140,6 +175,19 @@ export default function OrgChartPage() {
               icon={GitBranch}
               title="No reporting lines yet"
               description="Assign a reporting manager to an employee and the hierarchy appears here."
+            />
+          </div>
+        ) : !hasMatches ? (
+          <div className="panel">
+            <EmptyState
+              icon={GitBranch}
+              title={`No matches for “${query.trim()}”`}
+              description="Try a different name, role or department."
+              action={
+                <Button variant="outline" size="sm" onClick={() => setQuery('')}>
+                  Clear search
+                </Button>
+              }
             />
           </div>
         ) : (
