@@ -12,6 +12,13 @@ Pairs with the [HR Portal Backend](https://github.com/Abaidullah9/HR-Portal-Back
 - **API:** Typed fetch client with `ApiResponse<T>` envelope matching the backend
 - **Testing:** Vitest + React Testing Library
 
+## Deployment
+
+`Dockerfile` builds the app into a Next.js standalone image, and the workspace's
+`docker-compose.yml` runs it with the API and MongoDB. See `DEPLOYMENT.md`
+beside both repositories for the commands and the production checklist (cookie
+mode for split hostnames, build-time `NEXT_PUBLIC_API_URL`, proxy settings).
+
 ## Getting Started
 
 ### Prerequisites
@@ -57,6 +64,7 @@ Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to 
 | `npm run lint` | Run ESLint |
 | `npm test` | Run Vitest once |
 | `npm run test:watch` | Run Vitest in watch mode |
+| `npm run test:e2e` | Playwright browser suite (`test/e2e`); signed-in specs need the seeded API |
 
 ## Authentication
 

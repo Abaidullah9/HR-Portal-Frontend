@@ -48,8 +48,9 @@ export default function ForgotPasswordPage() {
           {result ? (
             <div className="space-y-4">
               <p role="status" className="rounded-xl border edge p-3 text-sm text-foreground/75">
-                If that email is registered, a reset link has been sent. The link expires in 30
-                minutes.
+                {result.delivered
+                  ? 'If that email is registered, a reset link has been sent. The link expires in 30 minutes.'
+                  : 'This server has no mail provider configured, so no email was sent. Use the link below; it expires in 30 minutes.'}
               </p>
               {result.token && (
                 <p className="text-sm text-foreground/65">

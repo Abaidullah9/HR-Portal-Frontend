@@ -9,7 +9,6 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'HR Management System',
   description: 'Modern HR Management Dashboard - Employee Management, Payroll, Recruitment & More',
-  generator: 'v0.app',
   icons: {
     icon: [
       {

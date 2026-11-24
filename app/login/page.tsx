@@ -35,6 +35,9 @@ export default function LoginPage() {
   }
 
   const displayError = localError || error
+  // Seeded logins are a development convenience. A production build must not
+  // advertise working credentials on the sign-in page.
+  const showDemoCredentials = process.env.NODE_ENV !== 'production'
 
   return (
     <div className="min-h-screen flex items-center justify-center auth-canvas px-4">
@@ -132,7 +135,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Demo Credentials Helper */}
+        {/* Demo Credentials Helper — development only */}
+        {showDemoCredentials && (
         <div className="mt-6 bg-card/60 backdrop-blur border border-border rounded-xl p-4">
           <p className="text-xs font-semibold text-foreground mb-3">
             Database Seed Demo Credentials (Click to fill):
@@ -156,6 +160,7 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   )
