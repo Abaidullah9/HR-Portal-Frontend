@@ -17,6 +17,50 @@ const badgeVariant = (status: string) => {
 const employeeName = (employee: LeaveRequest['employeeId']) =>
   typeof employee === 'object' && employee !== null ? employee.name : 'Employee'
 
+const StatusBadge = ({ status }: { status: string }) => (
+  <Badge variant={badgeVariant(status)} className="capitalize">
+    {status}
+  </Badge>
+)
+
+interface ApproveRejectProps {
+  request: LeaveRequest
+  busy: boolean
+  onStatusChange: (request: LeaveRequest, status: 'approved' | 'rejected') => void
+}
+
+/** Approve/reject pair, shared by the table row and the card. */
+function ApproveReject({ request, busy, onStatusChange }: ApproveRejectProps) {
+  return (
+    <div className="flex justify-end gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 success-text pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:success-panel"
+        disabled={busy}
+        onClick={() => onStatusChange(request, 'approved')}
+        title="Approve"
+        aria-label={`Approve leave for ${employeeName(request.employeeId)}`}
+      >
+        <Check size={16} />
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-8 w-8 p-0 danger-text pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:danger-panel"
+        disabled={busy}
+        onClick={() => onStatusChange(request, 'rejected')}
+        title="Reject"
+        aria-label={`Reject leave for ${employeeName(request.employeeId)}`}
+      >
+        <X size={16} />
+      </Button>
+    </div>
+  )
+}
+
 interface LeaveTableProps {
   pagination?: ServerPagination
   requests: LeaveRequest[]
@@ -68,11 +112,7 @@ export function LeaveTable({
     {
       header: 'Status',
       accessor: 'leaveStatus',
-      render: (status) => (
-        <Badge variant={badgeVariant(status)} className="capitalize">
-          {status}
-        </Badge>
-      ),
+      render: (status) => <StatusBadge status={status} />,
     },
   ]
 
@@ -84,32 +124,7 @@ export function LeaveTable({
       className: 'text-right',
       render: (_id, row) =>
         row.leaveStatus === 'pending' ? (
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 success-text pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:success-panel"
-              disabled={busyId === row._id}
-              onClick={() => onStatusChange(row, 'approved')}
-              title="Approve"
-              aria-label={`Approve leave for ${employeeName(row.employeeId)}`}
-            >
-              <Check size={16} />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 danger-text pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:danger-panel"
-              disabled={busyId === row._id}
-              onClick={() => onStatusChange(row, 'rejected')}
-              title="Reject"
-              aria-label={`Reject leave for ${employeeName(row.employeeId)}`}
-            >
-              <X size={16} />
-            </Button>
-          </div>
+          <ApproveReject request={row} busy={busyId === row._id} onStatusChange={onStatusChange} />
         ) : null,
     })
   }
@@ -138,6 +153,29 @@ export function LeaveTable({
           pagination={pagination}
           columns={columns}
           data={requests}
+          cardsBelow="xl"
+          renderCard={(request) => (
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">{employeeName(request.employeeId)}</p>
+                  <p className="text-xs text-foreground/65 capitalize">{request.leaveType} leave</p>
+                </div>
+                <StatusBadge status={request.leaveStatus} />
+              </div>
+              <p className="text-sm text-foreground/75">
+                {formatDate(request.fromDate)} – {formatDate(request.toDate)}
+              </p>
+              <p className="text-sm text-foreground/60 break-words">{request.reasonForLeave}</p>
+              {canApprove && request.leaveStatus === 'pending' && (
+                <ApproveReject
+                  request={request}
+                  busy={busyId === request._id}
+                  onStatusChange={onStatusChange}
+                />
+              )}
+            </div>
+          )}
         />
       )}
     </div>

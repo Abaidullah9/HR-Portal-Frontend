@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import { EmployeeTable } from './employee-table'
 import type { Employee } from '@/types/employee'
 
@@ -38,7 +38,9 @@ beforeEach(() => {
 describe('EmployeeTable role gating', () => {
   it('offers the delete action when the role can manage employees', () => {
     renderTable(true)
-    expect(screen.getByRole('button', { name: 'Delete employee' })).toBeTruthy()
+    // The directory renders a table and a card list; the test drives the table.
+    const table = within(screen.getByRole('table'))
+    expect(table.getByRole('button', { name: 'Delete employee' })).toBeTruthy()
   })
 
   it('renders no delete action when the role cannot manage employees', () => {
@@ -48,7 +50,8 @@ describe('EmployeeTable role gating', () => {
 
   it('still shows the directory rows to a read-only role', () => {
     renderTable(false)
-    expect(screen.getByText('Diana Employee')).toBeTruthy()
+    const table = within(screen.getByRole('table'))
+    expect(table.getByText('Diana Employee')).toBeTruthy()
   })
 
   it('hides the add action in the empty state for a read-only role', () => {

@@ -3,10 +3,9 @@
 import { Banknote } from 'lucide-react'
 import { Badge } from '@/components/common/badge'
 import { DataTable, DataTableSkeleton, type ColumnDef, type ServerPagination } from '@/components/common/data-table'
-import { TablePager } from '@/components/common/table-pager'
 import { EmptyState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
-import { cn, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import type { EmployeePayroll } from '@/types/payroll'
 
 const employeeName = (employee: EmployeePayroll['employeeId']) =>
@@ -32,26 +31,19 @@ interface PayrollTableProps {
   onViewPayslip: (id: string) => void
 }
 
-interface RowActionsProps {
-  record: EmployeePayroll
-  markingId: string | null
-  canMarkPaid: boolean
-  onMarkPaid: (id: string) => void
-  onViewPayslip: (id: string) => void
-  className?: string
-}
-
+/** The record's actions, shared by the table row and the card. */
 function RowActions({
   record,
   markingId,
   canMarkPaid,
   onMarkPaid,
   onViewPayslip,
-  className,
-}: RowActionsProps) {
-  const id = record._id as string
+}: Omit<PayrollTableProps, 'pagination' | 'records' | 'loading'> & {
+  record: EmployeePayroll
+}) {
+  const id = record._id
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className="flex items-center justify-end gap-2">
       <Button type="button" size="sm" variant="outline" onClick={() => onViewPayslip(id)} className="text-xs">
         Payslip
       </Button>
@@ -80,6 +72,8 @@ export function PayrollTable({
   onMarkPaid,
   onViewPayslip,
 }: PayrollTableProps) {
+  const actions = { markingId, canMarkPaid, onMarkPaid, onViewPayslip }
+
   const columns: ColumnDef<EmployeePayroll>[] = [
     {
       header: 'Employee',
@@ -113,97 +107,56 @@ export function PayrollTable({
       accessor: 'status',
       render: (status) => statusBadge(status),
     },
+    {
+      header: 'Actions',
+      accessor: '_id',
+      sortable: false,
+      className: 'text-right',
+      render: (_id, row) => <RowActions record={row} {...actions} />,
+    },
   ]
 
-  columns.push({
-    header: 'Actions',
-    accessor: '_id',
-    sortable: false,
-    className: 'text-right',
-    render: (id, row) => (
-      <RowActions
-        record={row}
-        markingId={markingId}
-        canMarkPaid={canMarkPaid}
-        onMarkPaid={onMarkPaid}
-        onViewPayslip={onViewPayslip}
-        className="justify-end"
-      />
-    ),
-  })
-
-  if (loading && records.length === 0) {
-    return (
-      <div className="panel overflow-hidden" role="status" aria-busy="true">
-        <span className="sr-only">Loading payroll records</span>
-        <DataTableSkeleton rows={5} columns={7} />
-      </div>
-    )
-  }
-
-  if (records.length === 0) {
-    return (
-      <div className="panel overflow-hidden">
+  return (
+    <div className="panel overflow-hidden">
+      {loading && records.length === 0 ? (
+        <div role="status" aria-busy="true">
+          <span className="sr-only">Loading payroll records</span>
+          <DataTableSkeleton rows={5} columns={7} />
+        </div>
+      ) : records.length === 0 ? (
         <EmptyState
           icon={Banknote}
           title="No payroll records yet"
           description="Once salaries are processed for a pay period, the records and their payment status appear here."
         />
-      </div>
-    )
-  }
-
-  return (
-    <div className="panel overflow-hidden">
-      {/* Narrow screens show cards: below this width the seven columns would put
-          the status and actions behind a horizontal scroll. */}
-      <ul className="divide-y edge xl:hidden">
-        {records.map((record) => (
-          <li key={record._id as string} className="space-y-3 px-4 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold text-foreground">{employeeName(record.employeeId)}</p>
-                <p className="text-xs text-foreground/65">
-                  {formatDate(record.payPeriodStart)} ·{' '}
-                  <span className="capitalize">{record.paymentMethod}</span>
-                </p>
-              </div>
-              {statusBadge(record.status)}
-            </div>
-            <dl className="flex items-baseline justify-between gap-3 text-sm">
-              <dt className="text-foreground/65">Net pay</dt>
-              <dd className="font-semibold text-foreground">{money(record.netPay)}</dd>
-            </dl>
-            <RowActions
-              record={record}
-              markingId={markingId}
-              canMarkPaid={canMarkPaid}
-              onMarkPaid={onMarkPaid}
-              onViewPayslip={onViewPayslip}
-              className="justify-end"
-            />
-          </li>
-        ))}
-      </ul>
-      {pagination && (
-        <div className="xl:hidden">
-          <TablePager
-            page={pagination.page}
-            pageCount={pagination.pageCount}
-            total={pagination.total}
-            pageSize={pagination.pageSize}
-            onPageChange={pagination.onPageChange}
-          />
-        </div>
-      )}
-      <div className="hidden xl:block">
+      ) : (
         <DataTable<EmployeePayroll>
           caption="Payroll records"
           pagination={pagination}
           columns={columns}
           data={records}
+          cardsBelow="xl"
+          renderCard={(record) => (
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">{employeeName(record.employeeId)}</p>
+                  <p className="text-xs text-foreground/65">
+                    {formatDate(record.payPeriodStart)} ·{' '}
+                    <span className="capitalize">{record.paymentMethod}</span>
+                  </p>
+                </div>
+                {statusBadge(record.status)}
+              </div>
+              <dl className="flex items-baseline justify-between gap-3 text-sm">
+                <dt className="text-foreground/65">Net pay</dt>
+                <dd className="font-semibold text-foreground">{money(record.netPay)}</dd>
+              </dl>
+              <RowActions record={record} {...actions} />
+            </div>
+          )}
         />
-      </div>
+      )}
     </div>
   )
 }

@@ -14,12 +14,20 @@ import { dayKey, formatTime, isLate } from '@/lib/attendance'
 import { formatDate } from '@/lib/utils'
 import type { AttendanceRecord } from '@/types/attendance'
 
+const statusBadge = (row: AttendanceRecord, lateAfter: string) => {
+  if (!row.checkIn) return <Badge variant="destructive">Absent</Badge>
+  if (isLate(row.checkIn, lateAfter)) return <Badge variant="warning">Late</Badge>
+  return <Badge variant="success">Present</Badge>
+}
+
+const employeeName = (employee: AttendanceRecord['employeeId']) =>
+  typeof employee === 'object' && employee !== null ? employee.name : 'Unknown employee'
+
 const buildColumns = (lateAfter: string): ColumnDef<AttendanceRecord>[] => [
   {
     header: 'Employee',
     accessor: 'employeeId',
-    render: (employee) =>
-      typeof employee === 'object' && employee !== null ? employee.name : 'Unknown employee',
+    render: (employee) => employeeName(employee),
     sortValue: (row) =>
       typeof row.employeeId === 'object' && row.employeeId !== null ? row.employeeId.name : '',
   },
@@ -45,11 +53,7 @@ const buildColumns = (lateAfter: string): ColumnDef<AttendanceRecord>[] => [
   {
     header: 'Status',
     accessor: 'status',
-    render: (_status, row) => {
-      if (!row.checkIn) return <Badge variant="destructive">Absent</Badge>
-      if (isLate(row.checkIn, lateAfter)) return <Badge variant="warning">Late</Badge>
-      return <Badge variant="success">Present</Badge>
-    },
+    render: (_status, row) => statusBadge(row, lateAfter),
     sortValue: (row) =>
       row.checkIn ? (isLate(row.checkIn, lateAfter) ? 'late' : 'present') : 'absent',
   },
@@ -114,6 +118,28 @@ export function AttendanceTable({
         pagination={pagination}
         columns={columns}
         data={records}
+        cardsBelow="lg"
+        renderCard={(record) => (
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">{employeeName(record.employeeId)}</p>
+                <p className="text-xs text-foreground/65">{formatDate(record.date)}</p>
+              </div>
+              {statusBadge(record, lateAfter)}
+            </div>
+            <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+              <div className="flex gap-1.5">
+                <dt className="text-foreground/65">In</dt>
+                <dd className="text-foreground">{formatTime(record.checkIn)}</dd>
+              </div>
+              <div className="flex gap-1.5">
+                <dt className="text-foreground/65">Out</dt>
+                <dd className="text-foreground">{formatTime(record.checkOut)}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
       />
     </div>
   )

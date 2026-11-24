@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { SearchX, Trash2, Users } from 'lucide-react'
+import { SearchX, Users } from 'lucide-react'
 import { Badge } from '@/components/common/badge'
 import { DataTable, DataTableSkeleton, type ColumnDef, type ServerPagination } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
 import type { Employee } from '@/types/employee'
+import { DeleteEmployee } from './delete-employee'
 
 const statusVariant = (isActive: boolean): 'success' | 'destructive' =>
   isActive ? 'success' : 'destructive'
@@ -79,52 +80,13 @@ export function EmployeeTable({
       accessor: '_id',
       className: 'text-right',
       render: (id) => (
-        <div className="flex justify-end">
-          <div className="relative">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="h-8 w-8 text-foreground/60 pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:danger-text hover:danger-panel dark:text-foreground/65 dark:hover:danger-text"
-              onClick={() => setConfirmId(id as string)}
-              aria-label="Delete employee"
-            >
-              <Trash2 size={15} />
-            </Button>
-            {confirmId === id && (
-              <div className="absolute right-0 top-9 z-50 w-56 rounded-2xl border edge bg-white/95 p-4 backdrop-blur-xl shadow-2xl shadow-black/10 dark:edge dark:surface-95">
-                <p className="font-semibold text-foreground">Confirm deletion?</p>
-                <p className="mt-1 text-sm text-foreground/60">
-                  This employee will be permanently removed.
-                </p>
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setConfirmId(null)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={deletingId === id}
-                    onClick={() => {
-                      setConfirmId(null)
-                      onDelete(id as string)
-                    }}
-                    className="flex-1"
-                  >
-                    {deletingId === id ? 'Deleting…' : 'Delete'}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <DeleteEmployee
+          id={id as string}
+          deletingId={deletingId}
+          confirming={confirmId === id}
+          onConfirmChange={setConfirmId}
+          onDelete={onDelete}
+        />
       ),
     })
   }
@@ -159,6 +121,35 @@ export function EmployeeTable({
           pagination={pagination}
           columns={columns}
           data={employees}
+          cardsBelow="xl"
+          renderCard={(employee) => (
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/employees/${employee._id}`} className="font-semibold text-foreground hover:underline">
+                    {employee.name}
+                  </Link>
+                  <p className="text-xs font-mono text-foreground/60">{employee.employeeCode}</p>
+                </div>
+                <Badge variant={statusVariant(Boolean(employee.isActive))}>
+                  {employee.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+              <p className="text-sm text-foreground/75 break-words">
+                {departmentName(employee.departmentId)} · {employee.position}
+              </p>
+              <p className="text-xs text-foreground/60 break-all">{employee.email}</p>
+              {canManage && (
+                <DeleteEmployee
+                  id={employee._id}
+                  deletingId={deletingId}
+                  confirming={confirmId === employee._id}
+                  onConfirmChange={setConfirmId}
+                  onDelete={onDelete}
+                />
+              )}
+            </div>
+          )}
         />
       )}
     </div>
