@@ -169,7 +169,10 @@ export function DataTable<T extends Record<string, any>>({
                   <td
                     key={String(column.accessor)}
                     className={cn(
-                      'wrap-anywhere px-6 py-4 text-sm text-foreground',
+                      // break-words, not wrap-anywhere: overflow-wrap: anywhere also
+                      // shrinks a column's min-content width, which stacks short labels
+                      // one character per line once the table gets tight.
+                      'break-words px-6 py-4 text-sm text-foreground',
                       column.className,
                     )}
                   >

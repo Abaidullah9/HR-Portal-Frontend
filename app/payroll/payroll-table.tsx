@@ -61,7 +61,7 @@ export function PayrollTable({
       header: 'Period start',
       accessor: 'payPeriodStart',
       render: (date) => formatDate(date),
-      className: 'text-foreground/65 text-sm',
+      className: 'text-foreground/65 text-sm whitespace-nowrap',
     },
     {
       header: 'Payment method',
