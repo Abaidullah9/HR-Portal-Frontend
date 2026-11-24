@@ -155,9 +155,9 @@ export function PayrollTable({
 
   return (
     <div className="panel overflow-hidden">
-      {/* Narrow screens show cards: a six-column table would put the status and
-          actions behind a horizontal scroll. */}
-      <ul className="divide-y edge md:hidden">
+      {/* Narrow screens show cards: below this width the seven columns would put
+          the status and actions behind a horizontal scroll. */}
+      <ul className="divide-y edge xl:hidden">
         {records.map((record) => (
           <li key={record._id as string} className="space-y-3 px-4 py-4">
             <div className="flex items-start justify-between gap-3">
@@ -186,7 +186,7 @@ export function PayrollTable({
         ))}
       </ul>
       {pagination && (
-        <div className="md:hidden">
+        <div className="xl:hidden">
           <TablePager
             page={pagination.page}
             pageCount={pagination.pageCount}
@@ -196,7 +196,7 @@ export function PayrollTable({
           />
         </div>
       )}
-      <div className="hidden md:block">
+      <div className="hidden xl:block">
         <DataTable<EmployeePayroll>
           caption="Payroll records"
           pagination={pagination}

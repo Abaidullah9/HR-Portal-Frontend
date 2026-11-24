@@ -7,13 +7,13 @@ import { cn } from '@/lib/utils'
 export function DataTableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
   return (
     <div aria-hidden="true">
-      <div className="flex gap-6 border-b edge px-6 py-4">
+      <div className="flex gap-6 border-b edge px-4 py-4">
         {Array.from({ length: columns }).map((_, index) => (
           <div key={index} className="h-4 flex-1 rounded-md bg-foreground/10 motion-safe:animate-pulse" />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={rowIndex} className="flex gap-6 border-b edge px-6 py-4 last:border-0">
+        <div key={rowIndex} className="flex gap-6 border-b edge px-4 py-4 last:border-0">
           {Array.from({ length: columns }).map((_, columnIndex) => (
             <div
               key={columnIndex}

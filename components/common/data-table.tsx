@@ -124,7 +124,7 @@ export function DataTable<T extends Record<string, any>>({
                           : 'descending'
                         : undefined
                     }
-                    className="whitespace-nowrap px-6 py-4 text-left text-sm font-semibold text-foreground/80"
+                    className="whitespace-nowrap px-4 py-4 text-left text-sm font-semibold text-foreground/80"
                   >
                     {sortable ? (
                       <button
@@ -172,7 +172,7 @@ export function DataTable<T extends Record<string, any>>({
                       // break-words, not wrap-anywhere: overflow-wrap: anywhere also
                       // shrinks a column's min-content width, which stacks short labels
                       // one character per line once the table gets tight.
-                      'break-words px-6 py-4 text-sm text-foreground',
+                      'break-words px-4 py-4 text-sm text-foreground',
                       column.className,
                     )}
                   >
