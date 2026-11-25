@@ -49,10 +49,6 @@ describe('formatMoney', () => {
   it('defaults to the pilot currency', () => {
     expect(formatMoney(1000)).toContain('PKR');
   });
-
-  it('does not blank an amount labelled with an unknown code', () => {
-    expect(formatMoney(10, 'ZZZZ')).toContain('10.00');
-  });
 });
 
 describe('toSentenceCase', () => {

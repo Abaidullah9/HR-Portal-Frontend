@@ -30,6 +30,7 @@ export interface EmployeePayroll {
   payPeriodStart: string;
   payPeriodEnd: string;
   datePaid?: string;
+  currency?: string;
   paymentMethod: 'bank transfer' | 'cheque' | 'cash';
   status: 'pending' | 'completed' | 'failed';
   createdAt?: string;

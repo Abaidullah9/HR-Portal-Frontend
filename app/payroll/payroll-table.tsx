@@ -82,12 +82,14 @@ export function PayrollTable({
     {
       header: 'Base salary',
       accessor: 'baseSalary',
-      render: (value) => formatMoney(value),
+      render: (value, row) => formatMoney(value, row.currency),
     },
     {
       header: 'Net pay',
       accessor: 'netPay',
-      render: (value) => <span className="font-semibold text-foreground">{formatMoney(value)}</span>,
+      render: (value, row) => (
+        <span className="font-semibold text-foreground">{formatMoney(value, row.currency)}</span>
+      ),
     },
     {
       header: 'Period start',
@@ -147,7 +149,9 @@ export function PayrollTable({
               </div>
               <dl className="flex items-baseline justify-between gap-3 text-sm">
                 <dt className="text-foreground/65">Net pay</dt>
-                <dd className="font-semibold text-foreground">{formatMoney(record.netPay)}</dd>
+                <dd className="font-semibold text-foreground">
+                  {formatMoney(record.netPay, record.currency)}
+                </dd>
               </dl>
               <RowActions record={record} {...actions} />
             </div>
