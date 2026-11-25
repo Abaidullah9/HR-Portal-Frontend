@@ -12,6 +12,7 @@ export interface Payslip {
   periodStart: string
   periodEnd: string
   paymentMethod: string
+  currency?: string
   status: string
   datePaid?: string
   earnings: PayslipLine[]

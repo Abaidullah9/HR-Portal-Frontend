@@ -9,12 +9,38 @@ export function toSentenceCase(value: string): string {
   return value ? `${value.charAt(0).toUpperCase()}${value.slice(1).toLowerCase()}` : ''
 }
 
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+const moneyFormatters = new Map<string, Intl.NumberFormat>()
 
-/** "$7,916.67" for an amount; older records may store it as a string. */
-export function formatMoney(value?: number | string | null): string {
+/**
+ * "PKR 158,000.00" for an amount in the record's currency; older records may
+ * store it as a string. The ISO code is shown rather than a symbol so an amount
+ * can never be mistaken for a different currency.
+ */
+export function formatMoney(value?: number | string | null, currency = 'PKR'): string {
   const amount = Number(value ?? 0)
-  return Number.isFinite(amount) ? money.format(amount) : '--'
+  if (!Number.isFinite(amount)) return '--'
+
+  try {
+    let formatter = moneyFormatters.get(currency)
+    if (!formatter) {
+      formatter = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+        currencyDisplay: 'code',
+        // Intl drops the paise for PKR; a payslip must match its PDF exactly.
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+      moneyFormatters.set(currency, formatter)
+    }
+    return formatter.format(amount)
+  } catch {
+    // An unknown ISO code must not blank the number it labels.
+    return `${currency} ${amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
 }
 
 /** "May 9, 2026" for a timestamp, the raw value when unparseable, "--" when absent. */

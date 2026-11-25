@@ -70,7 +70,7 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
                   {formatDate(slip.periodStart)} – {formatDate(slip.periodEnd)}
                 </p>
                 <p className="text-sm text-foreground/65">
-                  Net pay {formatMoney(slip.netPay)}
+                  Net pay {formatMoney(slip.netPay, slip.currency)}
                   {slip.status ? ` · ${toSentenceCase(slip.status)}` : ''}
                 </p>
               </div>

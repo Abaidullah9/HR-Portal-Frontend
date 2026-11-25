@@ -92,7 +92,7 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
                   {payslip.earnings.map((line, index) => (
                     <div key={`${line.label}-${index}`} className="flex justify-between gap-3">
                       <dt className="capitalize text-foreground/75">{line.label}</dt>
-                      <dd className="tabular-nums text-foreground">{formatMoney(line.amount)}</dd>
+                      <dd className="tabular-nums text-foreground">{formatMoney(line.amount, payslip.currency)}</dd>
                     </div>
                   ))}
                 </dl>
@@ -109,7 +109,7 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
                     {payslip.deductions.map((line, index) => (
                       <div key={`${line.label}-${index}`} className="flex justify-between gap-3">
                         <dt className="capitalize text-foreground/75">{line.label}</dt>
-                        <dd className="tabular-nums text-foreground">{formatMoney(line.amount)}</dd>
+                        <dd className="tabular-nums text-foreground">{formatMoney(line.amount, payslip.currency)}</dd>
                       </div>
                     ))}
                   </dl>
@@ -120,15 +120,15 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
             <div className="space-y-1.5 border-t edge pt-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-foreground/65">Gross pay</span>
-                <span className="tabular-nums text-foreground">{formatMoney(payslip.grossPay)}</span>
+                <span className="tabular-nums text-foreground">{formatMoney(payslip.grossPay, payslip.currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-foreground/65">Total deductions</span>
-                <span className="tabular-nums text-foreground">{formatMoney(payslip.totalDeductions)}</span>
+                <span className="tabular-nums text-foreground">{formatMoney(payslip.totalDeductions, payslip.currency)}</span>
               </div>
               <div className="flex justify-between pt-2 text-base font-semibold">
                 <span>Net pay</span>
-                <span className="tabular-nums">{formatMoney(payslip.netPay)}</span>
+                <span className="tabular-nums">{formatMoney(payslip.netPay, payslip.currency)}</span>
               </div>
             </div>
 

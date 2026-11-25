@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn, formatDate, toSentenceCase } from './utils';
+import { cn, formatDate, formatMoney, toSentenceCase } from './utils';
 
 describe('cn utility', () => {
   it('should merge class names', () => {
@@ -37,6 +37,21 @@ describe('formatDate', () => {
 
   it('returns the raw value when it cannot be parsed', () => {
     expect(formatDate('not-a-date')).toBe('not-a-date');
+  });
+});
+
+describe('formatMoney', () => {
+  it('labels the amount with its currency code', () => {
+    // Intl separates the code from the amount with a non-breaking space.
+    expect(formatMoney(158000, 'PKR')).toMatch(/^PKR\s158,000\.00$/);
+  });
+
+  it('defaults to the pilot currency', () => {
+    expect(formatMoney(1000)).toContain('PKR');
+  });
+
+  it('does not blank an amount labelled with an unknown code', () => {
+    expect(formatMoney(10, 'ZZZZ')).toContain('10.00');
   });
 });
 
