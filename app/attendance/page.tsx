@@ -122,17 +122,22 @@ export default function AttendancePage() {
     }
   }
 
+  /** Saves an attendance change and reports whether the table needs reloading. */
+  const saveAttendance = async (id: string, payload: UpdateAttendancePayload, done: string) => {
+    const result = await dispatch(updateAttendance({ id, payload }))
+    if (!updateAttendance.fulfilled.match(result)) {
+      toast('Could not save that change', 'error')
+      return false
+    }
+    toast(done)
+    return true
+  }
+
   const handleCheckOut = async (recordId: string) => {
     setBusy(true)
     try {
-      const result = await dispatch(
-        updateAttendance({ id: recordId, payload: { checkOut: new Date().toISOString() } }),
-      )
-      if (updateAttendance.fulfilled.match(result)) {
-        toast('Checked out')
+      if (await saveAttendance(recordId, { checkOut: new Date().toISOString() }, 'Checked out')) {
         await refresh()
-      } else {
-        toast('Could not log that check-out', 'error')
       }
     } finally {
       setBusy(false)
@@ -143,13 +148,9 @@ export default function AttendancePage() {
     if (!correcting) return
     setSavingCorrection(true)
     try {
-      const result = await dispatch(updateAttendance({ id: correcting._id, payload }))
-      if (updateAttendance.fulfilled.match(result)) {
-        toast('Attendance corrected')
+      if (await saveAttendance(correcting._id, payload, 'Attendance corrected')) {
         setCorrecting(null)
         await refresh()
-      } else {
-        toast('Could not save that correction', 'error')
       }
     } finally {
       setSavingCorrection(false)

@@ -5,14 +5,9 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
-import { dayKey } from '@/lib/attendance'
+import { dayKey, employeeName } from '@/lib/attendance'
 import { formatDate } from '@/lib/utils'
 import type { AttendanceRecord, UpdateAttendancePayload } from '@/types/attendance'
-
-const employeeName = (record: AttendanceRecord) =>
-  typeof record.employeeId === 'object' && record.employeeId !== null
-    ? record.employeeId.name
-    : 'Employee'
 
 /** "HH:MM" in local time, the value a time input expects. */
 const clock = (value?: string): string => {

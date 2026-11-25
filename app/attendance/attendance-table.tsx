@@ -10,7 +10,7 @@ import {
 } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
-import { dayKey, formatTime, isLate } from '@/lib/attendance'
+import { dayKey, employeeName, formatTime, isLate } from '@/lib/attendance'
 import { formatDate } from '@/lib/utils'
 import type { AttendanceRecord } from '@/types/attendance'
 
@@ -20,9 +20,6 @@ const statusBadge = (row: AttendanceRecord, lateAfter: string) => {
   return <Badge variant="success">Present</Badge>
 }
 
-const employeeName = (employee: AttendanceRecord['employeeId']) =>
-  typeof employee === 'object' && employee !== null ? employee.name : 'Unknown employee'
-
 const buildColumns = (
   lateAfter: string,
   onCorrect?: (record: AttendanceRecord) => void,
@@ -30,7 +27,7 @@ const buildColumns = (
   {
     header: 'Employee',
     accessor: 'employeeId',
-    render: (employee) => employeeName(employee),
+    render: (_employee, row) => employeeName(row),
     sortValue: (row) =>
       typeof row.employeeId === 'object' && row.employeeId !== null ? row.employeeId.name : '',
   },
@@ -150,7 +147,7 @@ export function AttendanceTable({
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-semibold text-foreground">{employeeName(record.employeeId)}</p>
+                <p className="font-semibold text-foreground">{employeeName(record)}</p>
                 <p className="text-xs text-foreground/65">{formatDate(record.date)}</p>
               </div>
               {statusBadge(record, lateAfter)}

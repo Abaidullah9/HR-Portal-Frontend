@@ -5,10 +5,7 @@ import { Download, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDialogA11y } from '@/lib/hooks/use-dialog-a11y'
 import { downloadPayslip, fetchPayslip, type Payslip } from '@/lib/api/payroll'
-import { formatDate } from '@/lib/utils'
-
-const money = (value: number) =>
-  value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+import { formatDate, formatMoney } from '@/lib/utils'
 
 interface PayslipDialogProps {
   recordId: string
@@ -95,7 +92,7 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
                   {payslip.earnings.map((line, index) => (
                     <div key={`${line.label}-${index}`} className="flex justify-between gap-3">
                       <dt className="capitalize text-foreground/75">{line.label}</dt>
-                      <dd className="tabular-nums text-foreground">{money(line.amount)}</dd>
+                      <dd className="tabular-nums text-foreground">{formatMoney(line.amount)}</dd>
                     </div>
                   ))}
                 </dl>
@@ -112,7 +109,7 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
                     {payslip.deductions.map((line, index) => (
                       <div key={`${line.label}-${index}`} className="flex justify-between gap-3">
                         <dt className="capitalize text-foreground/75">{line.label}</dt>
-                        <dd className="tabular-nums text-foreground">{money(line.amount)}</dd>
+                        <dd className="tabular-nums text-foreground">{formatMoney(line.amount)}</dd>
                       </div>
                     ))}
                   </dl>
@@ -123,15 +120,15 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
             <div className="space-y-1.5 border-t edge pt-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-foreground/65">Gross pay</span>
-                <span className="tabular-nums text-foreground">{money(payslip.grossPay)}</span>
+                <span className="tabular-nums text-foreground">{formatMoney(payslip.grossPay)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-foreground/65">Total deductions</span>
-                <span className="tabular-nums text-foreground">{money(payslip.totalDeductions)}</span>
+                <span className="tabular-nums text-foreground">{formatMoney(payslip.totalDeductions)}</span>
               </div>
               <div className="flex justify-between pt-2 text-base font-semibold">
                 <span>Net pay</span>
-                <span className="tabular-nums">{money(payslip.netPay)}</span>
+                <span className="tabular-nums">{formatMoney(payslip.netPay)}</span>
               </div>
             </div>
 

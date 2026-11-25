@@ -39,6 +39,12 @@ export function formatTime(value?: string): string {
   return parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+/** The populated employee's name, or a placeholder when only an id came back. */
+export function employeeName(record: AttendanceRecord, fallback = 'Unknown employee'): string {
+  const { employeeId } = record
+  return employeeId && typeof employeeId === 'object' ? employeeId.name : fallback
+}
+
 export function recordEmployeeId(record: AttendanceRecord): string {
   const { employeeId } = record
   if (employeeId && typeof employeeId === 'object') return employeeId._id

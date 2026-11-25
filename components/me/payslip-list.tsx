@@ -4,7 +4,7 @@ import { EmptyState, ErrorState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { downloadMyPayslip, type Payslip } from '@/lib/api/payroll'
-import { formatDate, toSentenceCase } from '@/lib/utils'
+import { formatDate, formatMoney, toSentenceCase } from '@/lib/utils'
 
 interface PayslipListProps {
   payslips: Payslip[]
@@ -56,7 +56,7 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
           />
         </div>
       ) : (
-        <>
+        <div className="space-y-3">
         {downloadError && (
           <p role="alert" className="text-sm danger-text">
             {downloadError}
@@ -70,11 +70,7 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
                   {formatDate(slip.periodStart)} – {formatDate(slip.periodEnd)}
                 </p>
                 <p className="text-sm text-foreground/65">
-                  Net pay{' '}
-                  {slip.netPay.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  Net pay {formatMoney(slip.netPay)}
                   {slip.status ? ` · ${toSentenceCase(slip.status)}` : ''}
                 </p>
               </div>
@@ -92,7 +88,7 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
             </li>
           ))}
         </ul>
-        </>
+        </div>
       )}
     </section>
   )
