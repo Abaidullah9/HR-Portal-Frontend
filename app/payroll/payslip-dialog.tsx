@@ -21,6 +21,7 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
 
   const [payslip, setPayslip] = useState<Payslip | null>(null)
   const [error, setError] = useState('')
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -140,11 +141,24 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
               </Button>
               <Button
                 type="button"
-                onClick={() => downloadPayslip(payslip)}
+                disabled={downloading}
+                onClick={async () => {
+                  setDownloading(true)
+                  setError('')
+                  try {
+                    await downloadPayslip(payslip)
+                  } catch (problem) {
+                    setError(
+                      problem instanceof Error ? problem.message : 'Could not download the payslip',
+                    )
+                  } finally {
+                    setDownloading(false)
+                  }
+                }}
                 className="flex-1 brand text-white border edge gap-2"
               >
                 <Download size={16} />
-                Download payslip
+                {downloading ? 'Preparing…' : 'Download PDF'}
               </Button>
             </div>
           </div>

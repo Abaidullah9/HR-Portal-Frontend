@@ -21,8 +21,9 @@ import {
   fetchAttendanceSummary,
   type AttendanceSummary,
 } from '@/lib/api/insights'
-import type { AttendanceRecord } from '@/types/attendance'
+import type { AttendanceRecord, UpdateAttendancePayload } from '@/types/attendance'
 import { AttendanceTable } from './attendance-table'
+import { CorrectionDialog } from './correction-dialog'
 import { CheckInBar } from './check-in-bar'
 import { AttendanceToolbar } from '@/components/attendance/attendance-toolbar'
 import { AttendanceSummaryCards } from '@/components/attendance/attendance-summary-cards'
@@ -43,6 +44,8 @@ export default function AttendancePage() {
   const [page, setPage] = useState(0)
   const [selectedDate, setSelectedDate] = useState('')
   const [busy, setBusy] = useState(false)
+  const [correcting, setCorrecting] = useState<AttendanceRecord | null>(null)
+  const [savingCorrection, setSavingCorrection] = useState(false)
   const [summary, setSummary] = useState<AttendanceSummary | null>(null)
   const [summaryError, setSummaryError] = useState<string | null>(null)
   // The check-in bar needs today's record for every employee, which is not
@@ -136,6 +139,23 @@ export default function AttendancePage() {
     }
   }
 
+  const handleCorrection = async (payload: UpdateAttendancePayload) => {
+    if (!correcting) return
+    setSavingCorrection(true)
+    try {
+      const result = await dispatch(updateAttendance({ id: correcting._id, payload }))
+      if (updateAttendance.fulfilled.match(result)) {
+        toast('Attendance corrected')
+        setCorrecting(null)
+        await refresh()
+      } else {
+        toast('Could not save that correction', 'error')
+      }
+    } finally {
+      setSavingCorrection(false)
+    }
+  }
+
   const message = error ?? summaryError
   const changeDate = (value: string) => {
     setSelectedDate(value)
@@ -195,6 +215,7 @@ export default function AttendancePage() {
           filtered={Boolean(selectedDate)}
           lateAfter={lateAfter}
           onClearFilter={() => changeDate('')}
+          onCorrect={setCorrecting}
           pagination={{
             page,
             pageCount: pagination.totalPages,
@@ -204,6 +225,15 @@ export default function AttendancePage() {
           }}
         />
       </div>
+
+      {correcting && (
+        <CorrectionDialog
+          record={correcting}
+          submitting={savingCorrection}
+          onClose={() => setCorrecting(null)}
+          onSubmit={handleCorrection}
+        />
+      )}
     </AppLayout>
   )
 }

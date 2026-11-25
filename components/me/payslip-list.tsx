@@ -2,7 +2,8 @@ import { Banknote, Download } from 'lucide-react'
 import { DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState, ErrorState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
-import { downloadPayslip, type Payslip } from '@/lib/api/payroll'
+import { useState } from 'react'
+import { downloadMyPayslip, type Payslip } from '@/lib/api/payroll'
 import { formatDate, toSentenceCase } from '@/lib/utils'
 
 interface PayslipListProps {
@@ -13,6 +14,21 @@ interface PayslipListProps {
 }
 
 export function PayslipList({ payslips, loading, error, onRetry }: PayslipListProps) {
+  const [downloadError, setDownloadError] = useState('')
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  const download = async (slip: Payslip) => {
+    setDownloadError('')
+    setDownloadingId(slip.id)
+    try {
+      await downloadMyPayslip(slip)
+    } catch (problem) {
+      setDownloadError(problem instanceof Error ? problem.message : 'Could not download the payslip')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   return (
     <section aria-labelledby="my-payslips-heading" className="space-y-4">
       <h2 id="my-payslips-heading" className="flex items-center gap-2 text-lg font-semibold">
@@ -40,6 +56,12 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
           />
         </div>
       ) : (
+        <>
+        {downloadError && (
+          <p role="alert" className="text-sm danger-text">
+            {downloadError}
+          </p>
+        )}
         <ul className="space-y-3">
           {payslips.map((slip) => (
             <li key={slip.id} className="panel flex flex-wrap items-center justify-between gap-3 p-4">
@@ -61,14 +83,16 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => downloadPayslip(slip)}
+                disabled={downloadingId === slip.id}
+                onClick={() => void download(slip)}
               >
                 <Download size={15} aria-hidden="true" />
-                Payslip
+                {downloadingId === slip.id ? 'Preparing…' : 'Payslip PDF'}
               </Button>
             </li>
           ))}
         </ul>
+        </>
       )}
     </section>
   )

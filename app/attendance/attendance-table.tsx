@@ -23,7 +23,10 @@ const statusBadge = (row: AttendanceRecord, lateAfter: string) => {
 const employeeName = (employee: AttendanceRecord['employeeId']) =>
   typeof employee === 'object' && employee !== null ? employee.name : 'Unknown employee'
 
-const buildColumns = (lateAfter: string): ColumnDef<AttendanceRecord>[] => [
+const buildColumns = (
+  lateAfter: string,
+  onCorrect?: (record: AttendanceRecord) => void,
+): ColumnDef<AttendanceRecord>[] => [
   {
     header: 'Employee',
     accessor: 'employeeId',
@@ -57,6 +60,27 @@ const buildColumns = (lateAfter: string): ColumnDef<AttendanceRecord>[] => [
     sortValue: (row) =>
       row.checkIn ? (isLate(row.checkIn, lateAfter) ? 'late' : 'present') : 'absent',
   },
+  ...(onCorrect
+    ? [
+        {
+          header: 'Actions',
+          accessor: '_id',
+          sortable: false,
+          className: 'text-right',
+          render: (_id: unknown, row: AttendanceRecord) => (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="text-xs"
+              onClick={() => onCorrect(row)}
+            >
+              {row.regularized ? 'Adjust again' : 'Correct'}
+            </Button>
+          ),
+        } satisfies ColumnDef<AttendanceRecord>,
+      ]
+    : []),
 ]
 
 interface AttendanceTableProps {
@@ -67,6 +91,8 @@ interface AttendanceTableProps {
   /** Late threshold from the organization policy, e.g. "09:15". */
   lateAfter: string
   onClearFilter: () => void
+  /** Omit to hide the correction action (a read-only viewer). */
+  onCorrect?: (record: AttendanceRecord) => void
 }
 
 export function AttendanceTable({
@@ -76,8 +102,9 @@ export function AttendanceTable({
   filtered,
   lateAfter,
   onClearFilter,
+  onCorrect,
 }: AttendanceTableProps) {
-  const columns = buildColumns(lateAfter)
+  const columns = buildColumns(lateAfter, onCorrect)
 
   if (loading && records.length === 0) {
     return (
@@ -138,6 +165,22 @@ export function AttendanceTable({
                 <dd className="text-foreground">{formatTime(record.checkOut)}</dd>
               </div>
             </dl>
+            {record.regularized && record.regularizationNote && (
+              <p className="text-xs text-foreground/55">
+                Corrected: {record.regularizationNote}
+              </p>
+            )}
+            {onCorrect && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => onCorrect(record)}
+              >
+                {record.regularized ? 'Adjust again' : 'Correct times'}
+              </Button>
+            )}
           </div>
         )}
       />

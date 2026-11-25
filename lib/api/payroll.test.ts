@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { payslipHtml, type Payslip } from './payroll'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { downloadMyPayslip, downloadPayslip, type Payslip } from './payroll'
 
 const payslip: Payslip = {
   id: 'pay1',
@@ -8,30 +8,80 @@ const payslip: Payslip = {
   periodEnd: '2026-05-31T00:00:00.000Z',
   paymentMethod: 'bank transfer',
   status: 'completed',
-  earnings: [
-    { label: 'Base salary', amount: 1000 },
-    { label: 'transport', amount: 100 },
-  ],
+  earnings: [{ label: 'Base salary', amount: 1000 }],
   deductions: [{ label: 'tax', amount: 200 }],
-  grossPay: 1100,
+  grossPay: 1000,
   totalDeductions: 200,
-  netPay: 900,
+  netPay: 800,
 }
 
-describe('payslipHtml', () => {
-  it('includes the period, line items and net pay', () => {
-    const html = payslipHtml(payslip)
-    expect(html).toContain('Diana Employee')
-    expect(html).toContain('Base salary')
-    expect(html).toContain('900.00')
+const pdfResponse = () =>
+  new Response(new Blob(['%PDF-1.7'], { type: 'application/pdf' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/pdf' },
   })
 
-  it('escapes employee text instead of injecting it as markup', () => {
-    const html = payslipHtml({
-      ...payslip,
-      employee: { ...payslip.employee, name: '<img src=x onerror=alert(1)>' },
-    })
-    expect(html).not.toContain('<img src=x')
-    expect(html).toContain('&lt;img src=x')
+/** The download link is removed straight after the click, so capture the name. */
+const captureDownloads = () => {
+  const names: string[] = []
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    names.push(this.download)
+  })
+  return names
+}
+
+beforeEach(() => {
+  vi.restoreAllMocks()
+  document.body.innerHTML = ''
+  // jsdom has neither of these; the download path only needs them to exist.
+  URL.createObjectURL = vi.fn(() => 'blob:payslip')
+  URL.revokeObjectURL = vi.fn()
+})
+
+describe('payslip PDF download', () => {
+  it('fetches the caller’s own PDF from the session-scoped route', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(pdfResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    const downloads = captureDownloads()
+
+    await downloadMyPayslip(payslip)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/payroll/me/pay1/payslip'),
+      expect.objectContaining({ credentials: 'include' }),
+    )
+    expect(downloads).toEqual(['payslip-diana-employee-2026-05-01.pdf'])
+  })
+
+  it('uses the HR route when downloading someone else’s payslip', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(pdfResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    captureDownloads()
+
+    await downloadPayslip(payslip)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/payroll/pay1/payslip/pdf'),
+      expect.anything(),
+    )
+  })
+
+  it('surfaces the server message instead of saving an error page', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ success: false, message: 'Not authorized' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+
+    const downloads = captureDownloads()
+
+    await expect(downloadMyPayslip(payslip)).rejects.toThrow('Not authorized')
+    expect(downloads).toEqual([])
   })
 })

@@ -8,6 +8,9 @@ export interface AttendanceRecord {
   checkIn?: string;
   checkOut?: string;
   status?: 'present' | 'absent' | 'late';
+  /** Set when a manager corrected the recorded times. */
+  regularized?: boolean;
+  regularizationNote?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -20,6 +23,8 @@ export interface CreateAttendancePayload {
 }
 
 export interface UpdateAttendancePayload {
+  /** Required whenever the recorded times change; it becomes the audit note. */
+  regularizationNote?: string;
   checkIn?: string;
   checkOut?: string;
 }
