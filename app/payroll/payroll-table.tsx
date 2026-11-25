@@ -5,7 +5,7 @@ import { Badge } from '@/components/common/badge'
 import { DataTable, DataTableSkeleton, type ColumnDef, type ServerPagination } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
 import { Button } from '@/components/ui/button'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatMoney } from '@/lib/utils'
 import type { EmployeePayroll } from '@/types/payroll'
 
 const employeeName = (employee: EmployeePayroll['employeeId']) =>
@@ -19,8 +19,6 @@ const statusBadge = (status: string) => {
   return <Badge variant="warning">Pending</Badge>
 }
 
-const money = (value: number | string) => `$${Number(value).toLocaleString()}`
-
 interface PayrollTableProps {
   pagination?: ServerPagination
   records: EmployeePayroll[]
@@ -31,16 +29,16 @@ interface PayrollTableProps {
   onViewPayslip: (id: string) => void
 }
 
-/** The record's actions, shared by the table row and the card. */
-function RowActions({
-  record,
-  markingId,
-  canMarkPaid,
-  onMarkPaid,
-  onViewPayslip,
-}: Omit<PayrollTableProps, 'pagination' | 'records' | 'loading'> & {
+interface RowActionsProps {
   record: EmployeePayroll
-}) {
+  markingId: string | null
+  canMarkPaid: boolean
+  onMarkPaid: (id: string) => void
+  onViewPayslip: (id: string) => void
+}
+
+/** The record's actions, shared by the table row and the card. */
+function RowActions({ record, markingId, canMarkPaid, onMarkPaid, onViewPayslip }: RowActionsProps) {
   const id = record._id
   return (
     <div className="flex items-center justify-end gap-2">
@@ -84,12 +82,12 @@ export function PayrollTable({
     {
       header: 'Base salary',
       accessor: 'baseSalary',
-      render: (value) => money(value),
+      render: (value) => formatMoney(value),
     },
     {
       header: 'Net pay',
       accessor: 'netPay',
-      render: (value) => <span className="font-semibold text-foreground">{money(value)}</span>,
+      render: (value) => <span className="font-semibold text-foreground">{formatMoney(value)}</span>,
     },
     {
       header: 'Period start',
@@ -135,7 +133,6 @@ export function PayrollTable({
           pagination={pagination}
           columns={columns}
           data={records}
-          cardsBelow="xl"
           renderCard={(record) => (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -150,7 +147,7 @@ export function PayrollTable({
               </div>
               <dl className="flex items-baseline justify-between gap-3 text-sm">
                 <dt className="text-foreground/65">Net pay</dt>
-                <dd className="font-semibold text-foreground">{money(record.netPay)}</dd>
+                <dd className="font-semibold text-foreground">{formatMoney(record.netPay)}</dd>
               </dl>
               <RowActions record={record} {...actions} />
             </div>

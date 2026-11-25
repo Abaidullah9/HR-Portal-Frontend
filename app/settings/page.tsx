@@ -9,6 +9,7 @@ import { fetchOrganizationSettings } from '@/lib/redux/slices/organizationSlice'
 import { canView, roleNameOf } from '@/lib/auth/roles'
 import { OrganizationForm } from './organization-form'
 import { PreferencesPanel } from './preferences-panel'
+import { SecurityPanel } from './security-panel'
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch()
@@ -65,6 +66,8 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        <SecurityPanel />
 
         <PreferencesPanel />
       </div>

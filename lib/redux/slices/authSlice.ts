@@ -5,6 +5,7 @@ import {
   LoginCredentials,
   RegisterCredentials,
   AuthResponseData,
+  LoginResponse,
   ApiResponse,
 } from '@/types/auth';
 
@@ -63,6 +64,69 @@ export const loginUser = createAsyncThunk<
     const message =
       error instanceof Error ? error.message : 'Unable to connect to server';
     return rejectWithValue(message);
+  }
+});
+
+/**
+ * Password step. A two-factor account answers with a challenge instead of a
+ * session, so the caller has to hand the code to `verifyMfa` next.
+ */
+export const loginStep = createAsyncThunk<
+  LoginResponse,
+  LoginCredentials,
+  { rejectValue: string }
+>('auth/loginStep', async (credentials, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
+      body: JSON.stringify(credentials),
+    });
+
+    const data: ApiResponse<LoginResponse> = await response.json();
+    if (!response.ok || !data.success || !data.data) {
+      return rejectWithValue(data.message || 'Login failed. Please check your credentials.');
+    }
+
+    if ('user' in data.data && typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(data.data.user));
+    }
+
+    return data.data;
+  } catch (error: unknown) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Unable to connect to server');
+  }
+});
+
+/** Second step of a two-factor sign-in. */
+export const verifyMfa = createAsyncThunk<
+  AuthResponseData,
+  { mfaToken: string; code: string },
+  { rejectValue: string }
+>('auth/verifyMfa', async ({ mfaToken, code }, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/login/mfa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      cache: 'no-store',
+      body: JSON.stringify({ mfaToken, code }),
+    });
+
+    const data: ApiResponse<AuthResponseData> = await response.json();
+    if (!response.ok || !data.success || !data.data) {
+      return rejectWithValue(data.message || 'That code was not accepted.');
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(data.data.user));
+    }
+
+    return data.data;
+  } catch (error: unknown) {
+    return rejectWithValue(error instanceof Error ? error.message : 'Unable to connect to server');
   }
 });
 
@@ -191,6 +255,42 @@ export const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload ?? 'Login failed';
         state.isAuthenticated = false;
+      })
+
+      // loginStep
+      .addCase(loginStep.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginStep.fulfilled, (state, action: PayloadAction<LoginResponse>) => {
+        state.loading = false;
+        // A challenge is not a session: stay signed out until the code lands.
+        if ('user' in action.payload) {
+          state.user = action.payload.user;
+          state.isAuthenticated = true;
+        }
+        state.error = null;
+      })
+      .addCase(loginStep.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? 'Login failed';
+        state.isAuthenticated = false;
+      })
+
+      // verifyMfa
+      .addCase(verifyMfa.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyMfa.fulfilled, (state, action: PayloadAction<AuthResponseData>) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(verifyMfa.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? 'Invalid code';
       })
 
       // registerUser

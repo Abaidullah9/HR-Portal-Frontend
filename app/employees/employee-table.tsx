@@ -121,7 +121,6 @@ export function EmployeeTable({
           pagination={pagination}
           columns={columns}
           data={employees}
-          cardsBelow="xl"
           renderCard={(employee) => (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">

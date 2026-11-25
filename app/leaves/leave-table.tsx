@@ -153,7 +153,6 @@ export function LeaveTable({
           pagination={pagination}
           columns={columns}
           data={requests}
-          cardsBelow="xl"
           renderCard={(request) => (
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">

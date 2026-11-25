@@ -40,6 +40,14 @@ export interface AuthResponseData {
   token: string;
 }
 
+/** A correct password on a two-factor account: no session until the code lands. */
+export interface MfaChallenge {
+  mfaRequired: true
+  mfaToken: string
+}
+
+export type LoginResponse = AuthResponseData | MfaChallenge
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;

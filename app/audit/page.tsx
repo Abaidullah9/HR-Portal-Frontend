@@ -116,6 +116,20 @@ export default function AuditPage() {
                 },
               ]}
               data={entries}
+              renderCard={(entry) => (
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-mono text-xs text-foreground">{entry.action}</p>
+                    <span className="whitespace-nowrap text-xs text-foreground/65">
+                      {formatWhen(entry.createdAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground/75">
+                    {entry.actorName || 'Unknown'} · {entry.entity}
+                  </p>
+                  <p className="text-sm text-foreground/60 break-words">{entry.detail || '--'}</p>
+                </div>
+              )}
             />
           )}
         </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Download, FileBarChart, Plus } from 'lucide-react'
 import { AppLayout } from '@/components/layout/app-layout'
 import { SectionHeader } from '@/components/common/section-header'
+import { Badge } from '@/components/common/badge'
 import { DataTable, DataTableSkeleton } from '@/components/common/data-table'
 import { EmptyState } from '@/components/common/state-panel'
 import { AccessDenied } from '@/components/common/access-denied'
@@ -148,6 +149,33 @@ export default function ReportsPage() {
                 },
               ]}
               data={reports}
+              renderCard={(report) => (
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold text-foreground">{report.reportName}</p>
+                    <Badge className="capitalize">
+                      {report.category}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-foreground/65">
+                    {formatDate(report.lastGenerated)} ·{' '}
+                    {typeof report.generatedBy === 'object' && report.generatedBy !== null
+                      ? report.generatedBy.name
+                      : 'System Admin'}
+                  </p>
+                  {report.fileUrl && (
+                    <a
+                      href={report.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline"
+                    >
+                      <Download size={14} aria-hidden="true" />
+                      Download
+                    </a>
+                  )}
+                </div>
+              )}
             />
           )}
         </div>

@@ -24,6 +24,7 @@ interface DataTableProps<T> {
    * otherwise sit behind a horizontal scroll. Omit to always show the table.
    */
   renderCard?: (row: T) => React.ReactNode
+  /** Wide tables use the `xl` default; short ones can switch to cards sooner. */
   cardsBelow?: CardBreakpoint
 }
 
@@ -34,7 +35,7 @@ export function DataTable<T extends Record<string, any>>({
   pageSize,
   pagination,
   renderCard,
-  cardsBelow = 'md',
+  cardsBelow = 'xl',
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<SortState | null>(null)
   const [page, setPage] = useState(0)
@@ -109,20 +110,20 @@ export function DataTable<T extends Record<string, any>>({
 
   if (!renderCard) {
     return (
-      <div>
+      <>
         {table}
         {pager}
-      </div>
+      </>
     )
   }
 
   return (
-    <RowCards
-      below={cardsBelow}
-      rows={visible.map(renderCard)}
-      keys={visible.map((row, index) => (row._id ? String(row._id) : index))}
-      pager={pager}
-      table={table}
-    />
+    <RowCards below={cardsBelow} pager={pager} table={table}>
+      {visible.map((row, index) => (
+        <li key={row._id ? String(row._id) : index} className="px-4 py-4">
+          {renderCard(row)}
+        </li>
+      ))}
+    </RowCards>
   )
 }

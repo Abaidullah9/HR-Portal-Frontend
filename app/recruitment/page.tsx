@@ -153,6 +153,26 @@ export default function RecruitmentPage() {
               ]}
               pageSize={10}
               data={jobPostings}
+              renderCard={(posting) => (
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold text-foreground">{posting.position}</p>
+                    {getStatusBadge(posting.status)}
+                  </div>
+                  <p className="text-sm text-foreground/75">
+                    {typeof posting.departmentId === 'object' &&
+                    posting.departmentId !== null &&
+                    'name' in posting.departmentId
+                      ? posting.departmentId.name
+                      : '--'}{' '}
+                    · {posting.numberOfOpenings}{' '}
+                    {posting.numberOfOpenings === 1 ? 'opening' : 'openings'}
+                  </p>
+                  <p className="text-xs text-foreground/65">
+                    Posted {formatDate(posting.postedOnDate)}
+                  </p>
+                </div>
+              )}
             />
           ) : (
             <EmptyState

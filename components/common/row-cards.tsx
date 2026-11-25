@@ -19,31 +19,22 @@ const TABLE_ONLY: Record<CardBreakpoint, string> = {
 
 interface RowCardsProps {
   below: CardBreakpoint
-  rows: ReactNode[]
-  keys: (string | number)[]
-  pager?: ReactNode
+  /** The card `<li>` elements, keyed by the caller. */
+  children: ReactNode
   table: ReactNode
+  pager?: ReactNode
 }
 
 /**
- * Shows cards below the breakpoint and the table above it. The pager appears in
- * whichever view is visible, so only one is ever reachable.
+ * Swaps a table for a card list below the breakpoint. Only one view is ever
+ * displayed, so a single pager after both serves whichever one is showing.
  */
-export function RowCards({ below, rows, keys, pager, table }: RowCardsProps) {
+export function RowCards({ below, children, table, pager }: RowCardsProps) {
   return (
     <>
-      <ul className={cn('divide-y edge', CARD_ONLY[below])}>
-        {rows.map((row, index) => (
-          <li key={keys[index] ?? index} className="px-4 py-4">
-            {row}
-          </li>
-        ))}
-      </ul>
-      {pager && <div className={CARD_ONLY[below]}>{pager}</div>}
-      <div className={TABLE_ONLY[below]}>
-        {table}
-        {pager}
-      </div>
+      <ul className={cn('divide-y edge', CARD_ONLY[below])}>{children}</ul>
+      <div className={TABLE_ONLY[below]}>{table}</div>
+      {pager}
     </>
   )
 }
