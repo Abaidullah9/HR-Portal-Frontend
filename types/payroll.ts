@@ -27,6 +27,10 @@ export interface EmployeePayroll {
   deductions: PayrollDeduction[];
   bonuses: PayrollBonus[];
   netPay: number;
+  /** Issued when the record is paid; the human-readable PS-YYYYMM-NNNN number. */
+  payslipNumber?: string;
+  /** Present when a payroll run owns this record, which makes it read-only here. */
+  payRunId?: string;
   payPeriodStart: string;
   payPeriodEnd: string;
   datePaid?: string;

@@ -81,6 +81,11 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
                 {formatDate(payslip.periodStart)} – {formatDate(payslip.periodEnd)} ·{' '}
                 <span className="capitalize">{payslip.paymentMethod}</span>
               </p>
+              {payslip.payslipNumber && (
+                <p className="mt-1 font-mono text-xs tabular-nums text-foreground/65">
+                  Payslip {payslip.payslipNumber}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -131,6 +136,18 @@ export function PayslipDialog({ recordId, onClose }: PayslipDialogProps) {
                 <span className="tabular-nums">{formatMoney(payslip.netPay, payslip.currency)}</span>
               </div>
             </div>
+
+            {!payslip.reconciles && (
+              <div role="status" className="rounded-xl border warning-panel p-3 text-sm">
+                <p className="font-medium text-foreground">This payslip does not reconcile</p>
+                <p className="mt-1 text-foreground/75">
+                  The recorded net pay is {formatMoney(payslip.netPay, payslip.currency)}, while its
+                  earnings and deductions add up to{' '}
+                  {formatMoney(payslip.calculatedNetPay, payslip.currency)}. The recorded amount is
+                  what was paid.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 border-t edge pt-4">
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">

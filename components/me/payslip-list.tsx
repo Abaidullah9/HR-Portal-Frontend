@@ -73,6 +73,11 @@ export function PayslipList({ payslips, loading, error, onRetry }: PayslipListPr
                   Net pay {formatMoney(slip.netPay, slip.currency)}
                   {slip.status ? ` · ${toSentenceCase(slip.status)}` : ''}
                 </p>
+                {slip.payslipNumber && (
+                  <p className="mt-1 font-mono text-xs tabular-nums text-foreground/60">
+                    Payslip {slip.payslipNumber}
+                  </p>
+                )}
               </div>
               <Button
                 type="button"

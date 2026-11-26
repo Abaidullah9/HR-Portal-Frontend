@@ -13,6 +13,8 @@ const payslip: Payslip = {
   grossPay: 1000,
   totalDeductions: 200,
   netPay: 800,
+  calculatedNetPay: 800,
+  reconciles: true,
 }
 
 const pdfResponse = () =>
@@ -53,6 +55,16 @@ describe('payslip PDF download', () => {
       expect.objectContaining({ credentials: 'include' }),
     )
     expect(downloads).toEqual(['payslip-diana-employee-2026-05-01.pdf'])
+  })
+
+  it('names the file after the issued payslip number', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(pdfResponse())
+    vi.stubGlobal('fetch', fetchMock)
+    const downloads = captureDownloads()
+
+    await downloadPayslip({ ...payslip, payslipNumber: 'PS-202605-0001' })
+
+    expect(downloads).toEqual(['ps-202605-0001-diana-employee.pdf'])
   })
 
   it('uses the HR route when downloading someone else’s payslip', async () => {

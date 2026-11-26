@@ -8,6 +8,7 @@ export interface PayslipLine {
 
 export interface Payslip {
   id: string
+  payslipNumber?: string
   employee: { id?: string; name: string; code?: string; position?: string }
   periodStart: string
   periodEnd: string
@@ -19,7 +20,11 @@ export interface Payslip {
   deductions: PayslipLine[]
   grossPay: number
   totalDeductions: number
+  /** The amount recorded on the payroll row. */
   netPay: number
+  /** The same total re-added from the earnings and deductions lines. */
+  calculatedNetPay: number
+  reconciles: boolean
 }
 
 export async function fetchPayslip(id: string): Promise<Payslip> {
@@ -35,7 +40,10 @@ export async function fetchMyPayslips(): Promise<Payslip[]> {
 
 const fileName = (payslip: Payslip) => {
   const slug = payslip.employee.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-  return `payslip-${slug}-${payslip.periodStart.slice(0, 10)}.pdf`
+  // HR and the employee should end up with the same, searchable file name.
+  return payslip.payslipNumber
+    ? `${payslip.payslipNumber.toLowerCase()}-${slug}.pdf`
+    : `payslip-${slug}-${payslip.periodStart.slice(0, 10)}.pdf`
 }
 
 const save = (blob: Blob, name: string) => {

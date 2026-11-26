@@ -45,7 +45,7 @@ function RowActions({ record, markingId, canMarkPaid, onMarkPaid, onViewPayslip 
       <Button type="button" size="sm" variant="outline" onClick={() => onViewPayslip(id)} className="text-xs">
         Payslip
       </Button>
-      {canMarkPaid && record.status === 'pending' && (
+      {canMarkPaid && record.status === 'pending' && !record.payRunId && (
         <Button
           type="button"
           size="sm"
@@ -108,6 +108,17 @@ export function PayrollTable({
       render: (status) => statusBadge(status),
     },
     {
+      header: 'Payslip no.',
+      accessor: 'payslipNumber',
+      sortable: false,
+      render: (value) =>
+        value ? (
+          <span className="font-mono text-xs tabular-nums text-foreground">{value}</span>
+        ) : (
+          <span className="text-foreground/55">Not issued</span>
+        ),
+    },
+    {
       header: 'Actions',
       accessor: '_id',
       sortable: false,
@@ -121,7 +132,7 @@ export function PayrollTable({
       {loading && records.length === 0 ? (
         <div role="status" aria-busy="true">
           <span className="sr-only">Loading payroll records</span>
-          <DataTableSkeleton rows={5} columns={7} />
+          <DataTableSkeleton rows={5} columns={8} />
         </div>
       ) : records.length === 0 ? (
         <EmptyState

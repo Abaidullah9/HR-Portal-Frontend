@@ -13,6 +13,7 @@ import { roleNameOf } from '@/lib/auth/roles'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchPayroll, updatePayrollStatus } from '@/lib/redux/slices/payrollSlice'
 import { downloadCsv, toCsv } from '@/lib/csv'
+import { formatMoney } from '@/lib/utils'
 import { PAGE_SIZE, PICKER_LIMIT } from '@/lib/api/page'
 import { fetchPayrollSummary, type PayrollSummary } from '@/lib/api/insights'
 import { GeneratePayrollDialog } from './generate-payroll-dialog'
@@ -60,7 +61,7 @@ export default function PayrollPage() {
   const stats = [
     {
       title: 'Total net payroll',
-      value: summary ? `$${summary.totalNetPay.toLocaleString()}` : '--',
+      value: summary ? formatMoney(summary.totalNetPay) : '--',
       icon: DollarSign,
     },
     {
@@ -99,7 +100,7 @@ export default function PayrollPage() {
 
     const all = result.payload.data
     const rows: (string | number)[][] = [
-      ['Employee', 'Base salary', 'Net pay', 'Period start', 'Payment method', 'Status'],
+      ['Employee', 'Base salary', 'Net pay', 'Period start', 'Payment method', 'Status', 'Payslip number'],
       ...all.map((record) => [
         typeof record.employeeId === 'object' &&
         record.employeeId !== null &&
@@ -111,6 +112,7 @@ export default function PayrollPage() {
         record.payPeriodStart ?? '',
         record.paymentMethod ?? '',
         record.status ?? '',
+        record.payslipNumber ?? '',
       ]),
     ]
     downloadCsv(`payroll-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows))
