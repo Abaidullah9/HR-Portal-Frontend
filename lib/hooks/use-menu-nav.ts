@@ -40,7 +40,9 @@ export function useMenuNav({
   // Held in a ref so re-rendering the panel (hover state, new data) does not
   // restart the effect and yank focus back onto the first item.
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return

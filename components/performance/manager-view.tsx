@@ -8,7 +8,6 @@ import { useAppDispatch, useAppSelector } from '@/lib/redux/store'
 import { fetchAppraisals } from '@/lib/redux/slices/performanceSlice'
 import { ReviewWorkflow } from './review-workflow'
 import { Users, CheckCircle, Clock, AlertCircle, ClipboardList } from 'lucide-react'
-import { Appraisal } from '@/types/performance'
 
 const resolveId = (v: string | { _id: string } | undefined) =>
   typeof v === 'object' && v !== null ? v._id : v

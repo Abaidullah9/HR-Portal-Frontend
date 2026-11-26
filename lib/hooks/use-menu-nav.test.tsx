@@ -168,10 +168,10 @@ it('never strands focus on body when the menu unmounts', () => {
         </button>
         {open && (
           <div ref={menuRef} role="menu">
-            <button type="button" role="menuitemradio">
+            <button type="button" role="menuitemradio" aria-checked="false">
               Midnight
             </button>
-            <button type="button" role="menuitemradio">
+            <button type="button" role="menuitemradio" aria-checked="false">
               Indigo
             </button>
           </div>

@@ -38,7 +38,9 @@ export function useDialogA11y({
   initialFocusSelector,
 }: UseDialogA11yArgs) {
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
   // Capture the trigger and give focus back in the cleanup, so it happens
