@@ -23,7 +23,7 @@ mode for split hostnames, build-time `NEXT_PUBLIC_API_URL`, proxy settings).
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - The [backend](https://github.com/Abaidullah9/HR-Portal-Backend) running on `http://localhost:5000`
 
 ### Setup

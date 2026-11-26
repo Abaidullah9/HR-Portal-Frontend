@@ -17,12 +17,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
-      # The repo ships a `lint` script but no ESLint dependency, so CI does not
-      # call it; add eslint + eslint-config-next before making it a gate.
+      - run: npm run lint
       - run: npm test
       - run: npm run build
 
@@ -33,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
