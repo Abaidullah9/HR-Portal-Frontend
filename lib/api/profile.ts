@@ -5,7 +5,7 @@ export interface CompensationRecord {
   baseSalary: number
   currency: string
   effectiveFrom: string
-  reason: 'initial' | 'raise' | 'promotion' | 'adjustment' | 'correction'
+  reason: 'initial' | 'raise' | 'promotion' | 'adjustment' | 'correction' | 'rehire'
   note?: string
   createdAt?: string
 }
@@ -113,6 +113,33 @@ export interface EmployeeProfile {
 export async function fetchEmployeeProfile(employeeId: string): Promise<EmployeeProfile> {
   const response = await apiClient.get<EmployeeProfile>(`/employees/${employeeId}/profile`)
   if (!response.data) throw new Error('Could not load that employee profile')
+  return response.data
+}
+
+export interface RehireInput {
+  joiningDate?: string
+  position?: string
+  departmentId?: string
+  salary?: number
+}
+
+export interface RehireResult {
+  employee: EmployeeProfileEmployee
+  /** Present so HR can hand over the link when email delivery is unavailable. */
+  inviteLink?: string
+  delivered?: boolean
+}
+
+/** Brings a leaver back on the same employee and login record. */
+export async function rehireEmployee(
+  employeeId: string,
+  input: RehireInput,
+): Promise<RehireResult> {
+  const response = await apiClient.post<RehireResult>(
+    `/employees/${employeeId}/rehire`,
+    input,
+  )
+  if (!response.data) throw new Error('The employee was not reactivated')
   return response.data
 }
 

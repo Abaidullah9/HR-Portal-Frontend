@@ -25,6 +25,7 @@ import { ReviewsPanel } from '@/components/employees/profile/reviews-panel'
 import { PayPanel } from '@/components/employees/profile/pay-panel'
 import { ReportsPanel } from '@/components/employees/profile/reports-panel'
 import { PrivacyPanel } from '@/components/employees/profile/privacy-panel'
+import { RehireDialog } from '@/components/employees/profile/rehire-dialog'
 
 export default function EmployeeProfilePage() {
   const params = useParams<{ id: string }>()
@@ -38,6 +39,7 @@ export default function EmployeeProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [rehiring, setRehiring] = useState(false)
 
   const load = useCallback(async () => {
     if (!employeeId) return
@@ -67,6 +69,11 @@ export default function EmployeeProfilePage() {
     } finally {
       setBusy(null)
     }
+  }
+
+  const handleRehired = async () => {
+    await load()
+    toast('Employee rehired')
   }
 
   const handleExport = async () => {
@@ -153,6 +160,7 @@ export default function EmployeeProfilePage() {
           busy={busy}
           onExport={handleExport}
           onStartOffboarding={handleStartOffboarding}
+          onRehire={() => setRehiring(true)}
         />
 
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -176,6 +184,14 @@ export default function EmployeeProfilePage() {
 
         {canManage && (
           <PrivacyPanel busy={busy} onExport={handleExport} onErase={handleErase} />
+        )}
+
+        {rehiring && (
+          <RehireDialog
+            employee={profile.employee}
+            onClose={() => setRehiring(false)}
+            onRehired={() => void handleRehired()}
+          />
         )}
       </div>
     </AppLayout>

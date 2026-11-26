@@ -1,6 +1,6 @@
 'use client'
 
-import { Download, ShieldAlert } from 'lucide-react'
+import { Download, ShieldAlert, UserPlus } from 'lucide-react'
 import { SectionHeader } from '@/components/common/section-header'
 import { Badge } from '@/components/common/badge'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ interface ProfileOverviewProps {
   busy: string | null
   onExport: () => void
   onStartOffboarding: () => void
+  onRehire: () => void
 }
 
 /** Name, key facts and the page-level actions for an employee. */
@@ -28,6 +29,7 @@ export function ProfileOverview({
   busy,
   onExport,
   onStartOffboarding,
+  onRehire,
 }: ProfileOverviewProps) {
   const { employee } = profile
   const openTasks = profile.tasks.filter((task) => task.status === 'open').length
@@ -42,7 +44,7 @@ export function ProfileOverview({
             <Button variant="outline" onClick={onExport} disabled={busy === 'export'} className="gap-2">
               <Download size={16} /> Export data
             </Button>
-            {canManage && (
+            {canManage && employee.isActive && (
               <Button
                 variant="outline"
                 onClick={onStartOffboarding}
@@ -50,6 +52,11 @@ export function ProfileOverview({
                 className="gap-2"
               >
                 <ShieldAlert size={16} /> Start offboarding
+              </Button>
+            )}
+            {canManage && !employee.isActive && (
+              <Button variant="outline" onClick={onRehire} className="gap-2">
+                <UserPlus size={16} /> Rehire
               </Button>
             )}
           </div>
